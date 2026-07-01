@@ -1,0 +1,256 @@
+/* ==========================================================
+   RESET
+   ========================================================== */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* ==========================================================
+   GLOBAL
+   ========================================================== */
+
+body {
+    font-family: Inter, sans-serif;
+    background: #0F172A;
+    color: white;
+}
+
+a {
+    text-decoration: none;
+    color: inherit;
+}
+
+button {
+    cursor: pointer;
+    border: none;
+    font: inherit;
+}
+
+input {
+    font: inherit;
+}
+
+/* ==========================================================
+   APP LAYOUT
+   ========================================================== */
+
+.app-shell {
+    display: flex;
+    min-height: 100vh;
+}
+
+.main-content {
+    flex: 1;
+    padding: 35px;
+}
+
+/* ==========================================================
+   SIDEBAR
+   ========================================================== */
+
+.sidebar {
+    width: 250px;
+    background: #020617;
+    border-right: 1px solid #1E293B;
+
+    display: flex;
+    flex-direction: column;
+
+    padding: 25px;
+}
+
+.logo {
+    font-size: 28px;
+    font-weight: bold;
+
+    margin-bottom: 40px;
+}
+
+.sidebar-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.sidebar-nav a {
+    padding: 12px;
+    border-radius: 10px;
+
+    color: #94A3B8;
+}
+
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+    background: #1E293B;
+    color: white;
+}
+
+/* ==========================================================
+   PAGE HEADER
+   ========================================================== */
+
+.page-header {
+    margin-bottom: 30px;
+}
+
+.page-header h1 {
+    font-size: 38px;
+}
+
+.page-header p {
+    color: #94A3B8;
+
+    margin-top: 6px;
+}
+
+/* ==========================================================
+   DASHBOARD STAT GRID
+   ========================================================== */
+
+.stats-grid {
+
+    display: grid;
+
+    grid-template-columns:
+        repeat(auto-fit, minmax(220px,1fr));
+
+    gap: 20px;
+}
+
+/* ==========================================================
+   STAT CARD
+   ========================================================== */
+
+.stat-card {
+
+    background: #111827;
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    border: 1px solid #1F2937;
+}
+
+.stat-card p {
+
+    color: #94A3B8;
+
+    margin-bottom: 10px;
+}
+
+.stat-card h2 {
+
+    font-size: 32px;
+}
+
+/* ==========================================================
+   TOOLBAR
+   ========================================================== */
+
+.toolbar {
+
+    display: flex;
+
+    justify-content: space-between;
+
+    margin: 30px 0;
+
+    gap: 20px;
+}
+
+.toolbar input {
+
+    flex: 1;
+
+    padding: 12px;
+
+    border-radius: 10px;
+
+    background: #020617;
+
+    color: white;
+
+    border: 1px solid #334155;
+}
+
+.toolbar button {
+
+    background: #2563EB;
+
+    color: white;
+
+    padding: 12px 20px;
+
+    border-radius: 10px;
+}
+
+/* ==========================================================
+   TABLE
+   ========================================================== */
+
+.table-card {
+
+    background: #111827;
+
+    border-radius: 16px;
+
+    padding: 20px;
+
+    border: 1px solid #1F2937;
+}
+
+table {
+
+    width: 100%;
+
+    border-collapse: collapse;
+}
+
+th {
+
+    color: #94A3B8;
+
+    text-align: left;
+
+    padding: 15px;
+}
+
+td {
+
+    padding: 15px;
+
+    border-top: 1px solid #1F2937;
+}
+
+/* ==========================================================
+   STATUS BADGES
+   ========================================================== */
+
+.status-badge {
+
+    padding: 5px 10px;
+
+    border-radius: 999px;
+
+    font-size: 13px;
+}
+
+.status-badge.applied {
+    background: #1D4ED8;
+}
+
+.status-badge.interview {
+    background: #7C3AED;
+}
+
+.status-badge.offer {
+    background: #15803D;
+}
+
+.status-badge.rejected {
+    background: #991B1B;
+}
