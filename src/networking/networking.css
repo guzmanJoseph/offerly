@@ -1,0 +1,38 @@
+.contact-status {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: #334155;
+  font-size: 13px;
+}
+
+.contact-modal {
+  width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  z-index: 10000;
+}
+
+.contact-modal input,
+.contact-modal select,
+.contact-modal textarea {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #020617;
+  color: white;
+}
+
+.contact-modal textarea {
+  min-height: 100px;
+  resize: vertical;
+}

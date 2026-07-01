@@ -8,6 +8,7 @@ import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
 import Auth from "./pages/Auth";
 import CalendarPage from "./pages/Calendar";
+import Networking from "./pages/Networking";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -46,6 +47,7 @@ export default function App() {
         <Route path="/" element={<Dashboard />} />
         <Route path="/applications" element={<Applications />} />
         <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/networking" element={<Networking />} />
       </Routes>
     </Layout>
   );
