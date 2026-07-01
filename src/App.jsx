@@ -3,6 +3,7 @@ import { Routes, Route } from "react-router-dom";
 
 import { supabase } from "./lib/supabaseClient";
 
+// Imports the pages
 import Layout from "./layout/Layout";
 import Dashboard from "./pages/Dashboard";
 import Applications from "./pages/Applications";
