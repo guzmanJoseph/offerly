@@ -1,21 +1,46 @@
-import StatCard from "../dashboard/StatCard";
+import { useEffect, useState } from "react";
 
-import { sampleApplications } from "../data/sampleApplications";
-import { getApplicationStats } from "../utils/applicationStats";
+import { supabase } from "../lib/supabaseClient";
+
+import StatCard from "../dashboard/StatCard";
 import ApplicationStatusChart from "../dashboard/ApplicationStatusChart";
+
+import { getApplicationStats } from "../utils/applicationStats";
 
 export default function Dashboard() {
 
-    const stats = getApplicationStats(sampleApplications);
+    const [applications, setApplications] = useState([]);
+
+    useEffect(() => {
+        fetchApplications();
+    }, []);
+
+    async function fetchApplications() {
+
+        const { data, error } = await supabase
+            .from("applications")
+            .select("*");
+
+        if (error) {
+            console.error(error.message);
+            return;
+        }
+
+        setApplications(data);
+    }
+
+    const stats = getApplicationStats(applications);
 
     return (
         <>
             <div className="page-header">
+
                 <h1>Dashboard</h1>
 
                 <p>
                     Your job search at a glance.
                 </p>
+
             </div>
 
             <div className="stats-grid">
@@ -42,42 +67,40 @@ export default function Dashboard() {
 
                 <StatCard
                     title="Ghosted"
-                    value={stats.ghosted} // add a value here for ghosted applications if you have that data
-                />
-
-                <StatCard
-                    title="Follow-Ups Needed"
-                    value={stats.followUps} // add a value here for follow-ups if you have that data
+                    value={stats.ghosted}
                 />
 
                 <StatCard
                     title="Response Rate"
-                    value={stats.responseRate} // add a value here for response rate if you have that data
+                    value={`${stats.responseRate}%`}
                 />
 
                 <StatCard
                     title="Interview Rate"
-                    value={stats.interviewRate} // add a value here for interview rate if you have that data
+                    value={`${stats.interviewRate}%`}
                 />
 
                 <StatCard
                     title="Offer Rate"
-                    value={stats.offerRate} // add a value here for offer rate if you have that data
+                    value={`${stats.offerRate}%`}
                 />
 
                 <StatCard
                     title="Upcoming Interviews"
-                    value={stats.upcomingInterviews} // add a value here for upcoming interviews if you have that data
+                    value={stats.upcomingInterviews}
                 />
 
                 <StatCard
                     title="Recent Applications"
-                    value={stats.recentApplications} // add a value here for recent applications if you have that data
+                    value={stats.recentApplications}
                 />
 
             </div>
 
-            <ApplicationStatusChart applications={sampleApplications} />
+            <ApplicationStatusChart
+                applications={applications}
+            />
+
         </>
     );
 }

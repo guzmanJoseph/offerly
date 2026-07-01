@@ -1,35 +1,54 @@
 import { NavLink } from "react-router-dom";
+import { supabase } from "../lib/supabaseClient";
 
 export default function Sidebar() {
-  return (
-    <aside className="sidebar">
-      <h1 className="logo">Offerly</h1>
 
-      <nav className="sidebar-nav">
-        <NavLink to="/">Dashboard</NavLink>
+    async function handleLogout() {
+        const { error } = await supabase.auth.signOut();
 
-        <NavLink to="/applications">
-          Applications
-        </NavLink>
+        if (error) {
+            console.error(error);
+            return;
+        }
 
-        <NavLink to="/calendar">
-          Calendar
-        </NavLink>
+        // App.jsx will automatically detect the logout
+        // and send the user back to the login screen.
+    }
 
-        <NavLink to="/networking">
-          Networking
-        </NavLink>
+    return (
+        <aside className="sidebar">
 
-        <NavLink to="/settings">
-          Settings
-        </NavLink>
+            <h1 className="logo">Offerly</h1>
 
-        <NavLink to="/sign-out">
-          Sign Out
-        </NavLink>
+            <nav className="sidebar-nav">
 
+                <NavLink to="/">Dashboard</NavLink>
 
-      </nav>
-    </aside>
-  );
+                <NavLink to="/applications">
+                    Applications
+                </NavLink>
+
+                <NavLink to="/calendar">
+                    Calendar
+                </NavLink>
+
+                <NavLink to="/networking">
+                    Networking
+                </NavLink>
+
+                <NavLink to="/settings">
+                    Settings
+                </NavLink>
+
+            </nav>
+
+            <button
+                className="logout-btn"
+                onClick={handleLogout}
+            >
+                Log Out
+            </button>
+
+        </aside>
+    );
 }

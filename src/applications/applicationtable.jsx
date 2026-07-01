@@ -38,7 +38,7 @@ export default function ApplicationTable({
                                 <StatusBadge status={app.status} />
                             </td>
 
-                            <td>{app.dateApplied}</td>
+                            <td>{app.date_applied}</td>
 
                             <td>{app.location}</td>
 

@@ -1,0 +1,115 @@
+.calendar-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+}
+
+.rbc-calendar {
+  color: white;
+}
+
+.rbc-toolbar button {
+  color: white;
+  background: #020617;
+  border: 1px solid var(--border);
+}
+
+.rbc-toolbar button:hover,
+.rbc-toolbar button.rbc-active {
+  background: var(--blue);
+  color: white;
+}
+
+.rbc-month-view,
+.rbc-time-view,
+.rbc-agenda-view {
+  border-color: var(--border);
+}
+
+.rbc-header,
+.rbc-day-bg,
+.rbc-month-row,
+.rbc-date-cell,
+.rbc-time-content,
+.rbc-time-header {
+  border-color: var(--border);
+}
+
+.rbc-off-range-bg {
+  background: #020617;
+}
+
+.rbc-today {
+  background: rgba(37, 99, 235, 0.18);
+}
+
+.rbc-event {
+  background: var(--blue);
+  border-radius: 8px;
+}
+
+.event-modal {
+  width: 420px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.event-modal input,
+.event-modal select,
+.event-modal textarea {
+  padding: 12px;
+  border-radius: 10px;
+  border: 1px solid #334155;
+  background: #020617;
+  color: white;
+}
+
+.event-modal textarea {
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* ==========================================
+   MODAL BACKDROP
+========================================== */
+
+.modal-backdrop {
+    position: fixed;
+
+    inset: 0;
+
+    background: rgba(2, 6, 23, 0.75);
+
+    backdrop-filter: blur(4px);
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    z-index: 9999;
+}
+
+/* ==========================================
+   MODAL
+========================================== */
+
+.event-modal {
+
+    width: 450px;
+
+    background: var(--card);
+
+    border: 1px solid var(--border);
+
+    border-radius: 18px;
+
+    padding: 24px;
+
+    z-index: 10000;
+}

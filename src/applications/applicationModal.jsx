@@ -2,14 +2,15 @@ import { useState } from "react";
 import "./applications.css";
 
 export default function ApplicationModal({ application,onClose, onSave }) {
-  const [formData, setFormData] = useState({
-    company: "",
-    role: "",
-    status: "Applied",
-    dateApplied: "",
-    location: "",
-    priority: "Medium",
-  });
+    const [formData, setFormData] = useState({
+        company: application?.company || "",
+        role: application?.role || "",
+        status: application?.status || "Applied",
+        dateApplied: application?.date_applied || "",
+        location: application?.location || "",
+        priority: application?.priority || "Medium",
+        notes: application?.notes || "",
+    });
 
   function handleChange(e) {
     const { name, value } = e.target;

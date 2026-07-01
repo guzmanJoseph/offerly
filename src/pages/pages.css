@@ -1,0 +1,150 @@
+/* ==========================================================
+   AUTH PAGE
+========================================================== */
+
+.auth-page {
+    min-height: 100vh;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    background: linear-gradient(
+        135deg,
+        #020617,
+        #0F172A
+    );
+}
+
+/* ==========================================================
+   AUTH CARD
+========================================================== */
+
+.auth-card {
+
+    width: 420px;
+
+    background: var(--card);
+
+    border: 1px solid var(--border);
+
+    border-radius: 20px;
+
+    padding: 40px;
+
+    display: flex;
+    flex-direction: column;
+
+    gap: 18px;
+
+    box-shadow: 0 15px 35px rgba(0,0,0,.35);
+}
+
+/* ==========================================================
+   AUTH HEADER
+========================================================== */
+
+.auth-logo {
+
+    font-size: 42px;
+
+    font-weight: 700;
+
+    text-align: center;
+
+    margin-bottom: 10px;
+}
+
+.auth-title {
+
+    font-size: 30px;
+
+    text-align: center;
+}
+
+.auth-subtitle {
+
+    color: var(--secondary-text);
+
+    text-align: center;
+
+    margin-bottom: 10px;
+}
+
+/* ==========================================================
+   AUTH INPUTS
+========================================================== */
+
+.auth-input {
+
+    width: 100%;
+
+    padding: 14px;
+
+    border-radius: 12px;
+
+    border: 1px solid #334155;
+
+    background: #020617;
+
+    color: white;
+
+    transition: .2s;
+}
+
+.auth-input:focus {
+
+    outline: none;
+
+    border-color: var(--blue);
+}
+
+/* ==========================================================
+   AUTH BUTTON
+========================================================== */
+
+.auth-button {
+
+    width: 100%;
+
+    margin-top: 8px;
+
+    padding: 14px;
+
+    border-radius: 12px;
+
+    background: var(--blue);
+
+    color: white;
+
+    font-size: 16px;
+
+    font-weight: 600;
+
+    transition: .2s;
+}
+
+.auth-button:hover {
+
+    background: #1D4ED8;
+}
+
+/* ==========================================================
+   AUTH FOOTER
+========================================================== */
+
+.auth-switch {
+
+    text-align: center;
+
+    color: var(--secondary-text);
+
+    cursor: pointer;
+
+    transition: .2s;
+}
+
+.auth-switch:hover {
+
+    color: white;
+}
