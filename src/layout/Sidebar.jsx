@@ -1,5 +1,7 @@
 import { NavLink } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import "./layout.css";
+
 
 export default function Sidebar() {
 
