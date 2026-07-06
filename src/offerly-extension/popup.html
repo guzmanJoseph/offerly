@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+
+  <body>
+    <div class="popup">
+      <div class="brand">
+        <img src="offerly.png" alt="Offerly logo" class="logo" />
+        <div>
+          <h2>Offerly</h2>
+          <p>Save jobs in one click.</p>
+        </div>
+      </div>
+
+      <div id="loginView">
+        <input id="emailInput" type="email" placeholder="Email" />
+        <input id="passwordInput" type="password" placeholder="Password" />
+
+        <button id="loginBtn">Log in to Offerly</button>
+        <p id="loginStatus"></p>
+      </div>
+
+      <div id="saveView" class="hidden">
+        <input id="company" placeholder="Company" />
+        <input id="role" placeholder="Role" />
+        <input id="location" placeholder="Location" />
+
+        <button id="saveBtn">Save Application</button>
+        <button id="logoutBtn" class="secondary-btn">Disconnect</button>
+
+        <p id="status"></p>
+      </div>
+    </div>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

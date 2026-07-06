@@ -6,7 +6,9 @@ export default function ApplicationModal({ application,onClose, onSave }) {
         company: application?.company || "",
         role: application?.role || "",
         status: application?.status || "Applied",
-        dateApplied: application?.date_applied || "",
+        dateApplied:
+          application?.dateApplied ||
+          new Date().toISOString().split("T")[0],
         location: application?.location || "",
         priority: application?.priority || "Medium",
         notes: application?.notes || "",

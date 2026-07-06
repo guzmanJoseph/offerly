@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 
 import { supabase } from "../lib/supabaseClient";
 
@@ -10,10 +11,51 @@ export default function Applications() {
   const [applications, setApplications] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState(null);
+  const [searchParams] = useSearchParams();
 
   useEffect(() => {
     fetchApplications();
   }, []);
+
+  useEffect(() => {
+    const shouldImport = searchParams.get("importJob");
+
+    if (shouldImport !== "true") return;
+
+    setEditingApplication({
+      isImport: true,
+      company: searchParams.get("company") || "",
+      role: searchParams.get("role") || "",
+      location: searchParams.get("location") || "",
+      job_url: searchParams.get("jobUrl") || "",
+      status: "Applied",
+      dateApplied:
+        searchParams.get("dateApplied") ||
+        new Date().toISOString().split("T")[0],
+      priority: "Medium",
+      notes: "",
+    });
+
+  setIsModalOpen(true);
+}, [searchParams]);
+
+async function handleDeleteApplication(id) {
+  const confirmDelete = window.confirm("Delete this application?");
+
+  if (!confirmDelete) return;
+
+  const { error } = await supabase
+    .from("applications")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error(error.message);
+    return;
+  }
+
+  fetchApplications();
+}
 
   async function fetchApplications() {
     const { data, error } = await supabase
@@ -26,7 +68,45 @@ export default function Applications() {
       return;
     }
 
-    setApplications(data);
+    setApplications(data || []);
+  }
+
+  async function extractJobWithAI({ pageTitle, h1, pageText, jobUrl }) {
+    const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
+
+    const response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "gpt-5.5-mini",
+        input: `
+Extract job posting information.
+
+Return ONLY valid JSON:
+{
+  "company": "",
+  "role": "",
+  "location": "",
+  "salary": "",
+  "employmentType": "",
+  "workType": "",
+  "confidence": 0
+}
+
+URL: ${jobUrl}
+PAGE TITLE: ${pageTitle}
+H1: ${h1}
+PAGE TEXT:
+${pageText}
+        `,
+      }),
+    });
+
+    const result = await response.json();
+    return JSON.parse(result.output_text || "{}");
   }
 
   async function handleSaveApplication(application) {
@@ -36,7 +116,7 @@ export default function Applications() {
 
     if (!user) return;
 
-    if (editingApplication) {
+    if (editingApplication && !editingApplication.isImport) {
       const { error } = await supabase
         .from("applications")
         .update({
@@ -47,6 +127,7 @@ export default function Applications() {
           location: application.location,
           priority: application.priority,
           notes: application.notes,
+          job_url: application.job_url,
           updated_at: new Date(),
         })
         .eq("id", editingApplication.id);
@@ -65,6 +146,7 @@ export default function Applications() {
         location: application.location,
         priority: application.priority,
         notes: application.notes,
+        job_url: application.job_url,
       });
 
       if (error) {
@@ -114,6 +196,7 @@ export default function Applications() {
           setEditingApplication(app);
           setIsModalOpen(true);
         }}
+        onDelete={handleDeleteApplication}
       />
 
       {isModalOpen && (

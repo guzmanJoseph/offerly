@@ -1,0 +1,161 @@
+.gmail-page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.gmail-header h1 {
+  margin-bottom: 6px;
+}
+
+.gmail-header p {
+  color: var(--text-secondary);
+}
+
+/* Card */
+
+.gmail-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+}
+
+.gmail-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.gmail-card-header h2 {
+  margin: 0;
+}
+
+.gmail-card-header p {
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+
+/* Status Badge */
+
+.connection-badge {
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.connection-badge.connected {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.connection-badge.disconnected {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+/* Details */
+
+.gmail-details {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* Stats */
+
+.gmail-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.gmail-stat {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+}
+
+.gmail-stat h3 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.gmail-stat p {
+  margin-top: 6px;
+  color: var(--text-secondary);
+}
+
+/* Buttons */
+
+.gmail-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.primary-btn {
+  background: var(--blue);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primary-btn:hover {
+  opacity: .9;
+}
+
+.danger-btn {
+  background: rgba(239,68,68,.12);
+  color: #f87171;
+  border: 1px solid rgba(239,68,68,.3);
+  border-radius: 12px;
+  padding: 12px 18px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.danger-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.gmail-history {
+  margin-top: 28px;
+}
+
+.gmail-history h3 {
+  margin-bottom: 16px;
+}
+
+.gmail-history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-top: 1px solid var(--border);
+}
+
+.gmail-history-item:first-of-type {
+  border-top: none;
+}
+
+.gmail-history-item p {
+  margin: 4px 0 0;
+  color: var(--text-secondary);
+}
+
+.gmail-history-item span {
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 600;
+}

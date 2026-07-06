@@ -102,3 +102,29 @@
 
     border-color: var(--blue);
 }
+
+.edit-column {
+  width: 120px;
+}
+
+.delete-btn {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: none;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  cursor: pointer;
+}
+
+.delete-btn:hover {
+  background: #ef4444;
+  color: white;
+}
+
+.edit-column .action-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 8px;
+}

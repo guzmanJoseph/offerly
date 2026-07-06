@@ -55,6 +55,18 @@ export default function ApplicationStatusChart({ applications }) {
           <Tooltip />
         </PieChart>
       </ResponsiveContainer>
+
+      <div className="chart-legend">
+        {chartData.map((item, index) => (
+          <div key={item.name} className="legend-item">
+            <span
+              className="legend-color"
+              style={{ backgroundColor: colors[index] }}
+            />
+            <span>{item.name}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

@@ -23,6 +23,20 @@ export default function Auth() {
     }
   }
 
+  async function signInWithGoogle() {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      scopes: "https://www.googleapis.com/auth/gmail.readonly",
+      redirectTo: window.location.origin,
+    },
+  });
+
+  if (error) {
+    alert(error.message);
+  }
+}
+
   return (
     <div className="auth-page">
       <form className="auth-card" onSubmit={handleSubmit}>
@@ -56,6 +70,14 @@ export default function Auth() {
 
         <button className="auth-button" type="submit">
           {isLogin ? "Log In" : "Create Account"}
+        </button>
+
+        <button
+          type="button"
+          className="auth-google-button"
+          onClick={signInWithGoogle}
+        >
+          Continue with Google
         </button>
 
         <p className="auth-switch" onClick={() => setIsLogin(!isLogin)}>

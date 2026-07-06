@@ -11,6 +11,8 @@ import Auth from "./pages/Auth";
 import CalendarPage from "./pages/Calendar";
 import Networking from "./pages/Networking";
 import Settings from './pages/Settings';
+import ImportGmail from "./pages/ImportGmail";
+import Privacy from "./pages/Privacy";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -28,7 +30,11 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log("AUTH EVENT:", event);
+      console.log("SESSION:", session);
+      console.log("PROVIDER TOKEN:", session?.provider_token);
+
       setSession(session);
     });
 
@@ -48,10 +54,13 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/applications" element={<Applications />} />
+        <Route path="/gmail-import" element={<ImportGmail />} />
         <Route path="/calendar" element={<CalendarPage />} />
         <Route path="/networking" element={<Networking />} />
         <Route path="/settings" element={<Settings user={session.user} />} />
+        <Route path="/privacy" element={<Privacy />} />
       </Routes>
     </Layout>
+    
   );
 }

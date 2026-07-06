@@ -20,7 +20,15 @@ export default function Sidebar() {
     return (
         <aside className="sidebar">
 
-            <h1 className="logo">Offerly</h1>
+            <div className="sidebar-brand">
+                <img
+                    src="/offerly.png"
+                    alt="Offerly"
+                    className="sidebar-logo"
+                />
+
+                <h1 className="logo">Offerly</h1>
+            </div>
 
             <nav className="sidebar-nav">
 
@@ -28,6 +36,10 @@ export default function Sidebar() {
 
                 <NavLink to="/applications">
                     Applications
+                </NavLink>
+
+                <NavLink to="/gmail-import">
+                    Gmail Import
                 </NavLink>
 
                 <NavLink to="/calendar">
