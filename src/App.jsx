@@ -50,17 +50,28 @@ export default function App() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/applications" element={<Applications />} />
-        <Route path="/gmail-import" element={<ImportGmail />} />
-        <Route path="/calendar" element={<CalendarPage />} />
-        <Route path="/networking" element={<Networking />} />
-        <Route path="/settings" element={<Settings user={session.user} />} />
-        <Route path="/privacy" element={<Privacy />} />
-      </Routes>
-    </Layout>
-    
-  );
+  <Routes>
+    <Route path="/privacy" element={<Privacy />} />
+
+    {!session ? (
+      <Route path="*" element={<Auth />} />
+    ) : (
+      <Route
+        path="*"
+        element={
+          <Layout>
+            <Routes>
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/applications" element={<Applications />} />
+              <Route path="/gmail-import" element={<ImportGmail />} />
+              <Route path="/calendar" element={<CalendarPage />} />
+              <Route path="/networking" element={<Networking />} />
+              <Route path="/settings" element={<Settings user={session.user} />} />
+            </Routes>
+          </Layout>
+        }
+      />
+    )}
+  </Routes>
+);
 }
