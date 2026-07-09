@@ -1,16 +1,153 @@
-# React + Vite
+# Offerly
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+> A modern job application management platform that helps job seekers organize every aspect of their job search in one place.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+-  Track job applications with customizable statuses
+-  Gmail integration to automatically import recruiting emails
+-  Chrome Extension to save jobs directly from LinkedIn and supported job boards
+-  Networking tracker for recruiters, referrals, and alumni
+-  Calendar view for interviews and important deadlines
+-  Notes and application management
+-  Dashboard with job search analytics
+-  Secure authentication with Supabase and Google OAuth
 
-## React Compiler
+---
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Chrome Extension
 
-## Expanding the ESLint configuration
+Offerly includes a Chrome Extension that allows users to save jobs directly from supported job boards with one click.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Current capabilities include:
+
+- Save job title
+- Company
+- Location
+- Job URL
+- Automatically sync with your Offerly account
+
+Chrome Web Store:
+
+https://chromewebstore.google.com/detail/fphkldkkmkhefaknadkfekeappojnoji
+
+---
+
+## Tech Stack
+
+### Frontend
+
+- React
+- Vite
+- React Router
+- CSS3
+
+### Backend
+
+- Supabase
+- PostgreSQL
+- Supabase Authentication
+- Google OAuth
+
+### APIs
+
+- Gmail API
+- Google OAuth 2.0
+
+### Browser Extension
+
+- Chrome Extension (Manifest V3)
+
+---
+
+## Running Locally
+
+### Clone the repository
+
+```bash
+git clone https://github.com/guzmanJoseph/offerly.git
+```
+
+Install dependencies
+
+```bash
+npm install
+```
+
+Create a `.env` file in the project root.
+
+```env
+VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+```
+
+Run the development server
+
+```bash
+npm run dev
+```
+
+Open:
+
+```
+http://localhost:5173
+```
+
+---
+
+## Authentication
+
+Offerly supports:
+
+- Email / Password
+- Google Sign In
+
+Google accounts can optionally connect Gmail to automatically import recruiting emails.
+
+---
+
+## Project Structure
+
+```
+src/
+│
+├── applications/
+├── dashboard/
+├── layout/
+├── lib/
+├── networking/
+├── pages/
+├── styles/
+├── utils/
+│
+├── App.jsx
+└── main.jsx
+```
+
+---
+
+## Privacy
+
+Offerly only accesses Gmail data after the user explicitly grants permission.
+
+The Chrome Extension only reads the currently open job posting when the user chooses to save a job.
+
+Offerly does **not** sell personal data.
+
+---
+
+## Developer
+
+**Joseph Guzman**
+
+University of Florida  
+B.S. Computer Science
+
+GitHub:
+https://github.com/guzmanJoseph
+
+LinkedIn:
+https://www.linkedin.com/in/joseph-guzman-069972246/
+
+Portfolio:
+(Add Portfolio URL)
