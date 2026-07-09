@@ -1,5 +1,5 @@
 // src/pages/Settings.jsx
-import "../styles/Settings.css";
+import "../styles/settings.css";
 import React from "react";
 
 export default function Settings({ user }) {
