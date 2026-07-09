@@ -305,3 +305,44 @@ font-size:26px;
 }
 
 }
+
+.auth-wrapper {
+  position: relative;
+  z-index: 2;
+  width: 430px;
+}
+
+.back-to-home {
+    position: absolute;
+    top: 28px;
+    left: 28px;
+
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    padding: 10px 16px;
+
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 999px;
+
+    backdrop-filter: blur(12px);
+
+    transition: all 0.25s ease;
+}
+
+.back-to-home:hover {
+    color: white;
+    border-color: rgba(56, 189, 248, 0.45);
+    background: rgba(30, 41, 59, 0.9);
+
+    transform: translateX(-4px);
+
+    box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
+}

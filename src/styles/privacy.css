@@ -1,0 +1,248 @@
+* {
+    box-sizing: border-box;
+}
+
+.privacy-page {
+    min-height: 100vh;
+    padding: 70px 20px;
+    position: relative;
+    overflow-x: hidden;
+
+    background:
+        radial-gradient(circle at top left, rgba(37,99,235,.35), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(34,197,94,.20), transparent 30%),
+        #020617;
+
+    color: white;
+}
+
+.privacy-page::before,
+.privacy-page::after{
+    content:"";
+    position:fixed;
+    width:420px;
+    height:420px;
+    border-radius:50%;
+    filter:blur(110px);
+    opacity:.35;
+    z-index:0;
+    pointer-events:none;
+    animation:privacyGlow 10s ease-in-out infinite alternate;
+}
+
+.privacy-page::before{
+    background:#2563eb;
+    top:-150px;
+    left:-150px;
+}
+
+.privacy-page::after{
+    background:#22c55e;
+    right:-150px;
+    bottom:-150px;
+    animation-delay:3s;
+}
+
+@keyframes privacyGlow{
+
+    from{
+        transform:translateY(0);
+    }
+
+    to{
+        transform:translateY(60px);
+    }
+
+}
+
+.privacy-container{
+
+    position:relative;
+    z-index:2;
+
+    max-width:950px;
+
+    margin:auto;
+
+    padding:50px;
+
+    border-radius:28px;
+
+    background:rgba(15,23,42,.72);
+
+    backdrop-filter:blur(18px);
+
+    border:1px solid rgba(255,255,255,.08);
+
+    box-shadow:
+        0 30px 70px rgba(0,0,0,.45),
+        inset 0 1px 0 rgba(255,255,255,.05);
+
+    animation:fadePrivacy .8s ease;
+}
+
+@keyframes fadePrivacy{
+
+    from{
+        opacity:0;
+        transform:translateY(30px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+
+}
+
+.privacy-home{
+
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+
+    margin-bottom:35px;
+
+    padding:10px 18px;
+
+    border-radius:999px;
+
+    text-decoration:none;
+
+    color:#cbd5e1;
+
+    background:rgba(15,23,42,.65);
+
+    border:1px solid rgba(148,163,184,.18);
+
+    transition:.25s;
+}
+
+.privacy-home:hover{
+
+    transform:translateX(-4px);
+
+    color:white;
+
+    border-color:#38bdf8;
+
+    box-shadow:0 12px 28px rgba(37,99,235,.25);
+}
+
+.privacy-title{
+
+    font-size:56px;
+
+    font-weight:800;
+
+    margin-bottom:10px;
+
+    background:linear-gradient(
+        90deg,
+        #38bdf8,
+        #2563eb,
+        #22c55e
+    );
+
+    -webkit-background-clip:text;
+    -webkit-text-fill-color:transparent;
+}
+
+.privacy-updated{
+
+    color:#94a3b8;
+
+    margin-bottom:35px;
+}
+
+.privacy-container h2{
+
+    margin-top:40px;
+    margin-bottom:14px;
+
+    font-size:28px;
+
+    position:relative;
+}
+
+.privacy-container h2::after{
+
+    content:"";
+
+    display:block;
+
+    width:60px;
+    height:3px;
+
+    margin-top:10px;
+
+    border-radius:999px;
+
+    background:linear-gradient(
+        90deg,
+        #2563eb,
+        #38bdf8
+    );
+}
+
+.privacy-container p,
+.privacy-container li{
+
+    color:#cbd5e1;
+
+    line-height:1.9;
+
+    font-size:17px;
+}
+
+.privacy-container ul{
+
+    margin-top:18px;
+    padding-left:22px;
+}
+
+.privacy-container li{
+
+    margin-bottom:12px;
+}
+
+.contact-card{
+
+    margin-top:24px;
+
+    padding:22px;
+
+    border-radius:18px;
+
+    background:rgba(2,6,23,.55);
+
+    border:1px solid rgba(148,163,184,.18);
+}
+
+.contact-card a{
+
+    color:#38bdf8;
+
+    text-decoration:none;
+}
+
+.contact-card a:hover{
+
+    color:white;
+}
+
+@media(max-width:700px){
+
+.privacy-container{
+
+padding:30px;
+
+}
+
+.privacy-title{
+
+font-size:42px;
+
+}
+
+}

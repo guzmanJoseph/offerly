@@ -1,71 +1,89 @@
+import "../styles/privacy.css";
+import { Link } from "react-router-dom";
+
 export default function Privacy() {
   return (
-    <div
-      style={{
-        maxWidth: "900px",
-        margin: "50px auto",
-        padding: "24px",
-        color: "white",
-        lineHeight: 1.8,
-      }}
-    >
-      <h1>Privacy Policy</h1>
+    <div className="privacy-page">
+      <div className="privacy-container">
 
-      <p><strong>Last Updated:</strong> July 2026</p>
+        <Link to="/" className="privacy-home">
+          ← Back to Home
+        </Link>
 
-      <p>
-        Offerly is a job application tracking platform designed to help users
-        organize their job search and save job postings from supported websites.
-      </p>
+        <h1 className="privacy-title">Offerly Privacy Policy</h1>
 
-      <h2>Information We Collect</h2>
+        <p className="privacy-updated">
+          Last Updated • July 2026
+        </p>
 
-      <ul>
-        <li>Email address (for account authentication)</li>
-        <li>Job application information you choose to save</li>
-        <li>Job posting details such as company, role, location, and job URL</li>
-      </ul>
+        <p>
+          Offerly helps users organize and manage their job search by allowing
+          them to save job postings, track applications, organize networking
+          contacts, and monitor recruiting progress.
+        </p>
 
-      <h2>How We Use Information</h2>
+        <h2>Information We Collect</h2>
 
-      <p>
-        We use this information solely to provide Offerly's job tracking
-        features, synchronize your applications, and improve the user
-        experience.
-      </p>
+        <ul>
+          <li>Email address used to create your Offerly account.</li>
+          <li>Job applications you choose to save.</li>
+          <li>Job information such as company, role, location, and URL.</li>
+          <li>Optional Gmail data if you choose to connect Gmail.</li>
+        </ul>
 
-      <h2>Chrome Extension</h2>
+        <h2>How We Use Your Information</h2>
 
-      <p>
-        The Offerly Chrome Extension only accesses the active job posting page
-        after you open the extension. It extracts job details from the page and
-        saves them to your Offerly account. The extension does not continuously
-        monitor your browsing activity.
-      </p>
+        <p>
+          Your information is used only to provide Offerly's features,
+          including tracking applications, organizing your job search,
+          importing recruiting emails, and managing networking contacts.
+        </p>
 
-      <h2>AI Processing</h2>
+        <h2>Chrome Extension</h2>
 
-      <p>
-        Job posting content may be securely processed by AI services to extract
-        structured information such as company name, job title, and location.
-        This processing is performed only to provide the extension's
-        functionality.
-      </p>
+        <p>
+          The Offerly Chrome Extension only reads the currently open job page
+          when you explicitly save a job. It does not monitor your browsing or
+          collect information from other websites.
+        </p>
 
-      <h2>Data Sharing</h2>
+        <h2>AI Processing</h2>
 
-      <p>
-        Offerly does not sell your personal information. Information is shared
-        only with trusted service providers required to operate the application,
-        including authentication, database hosting, and AI processing.
-      </p>
+        <p>
+          Offerly may use AI services to extract structured information from job
+          postings solely to improve the application's features.
+        </p>
 
-      <h2>Contact</h2>
+        <h2>Data Sharing</h2>
 
-      <p>
-        Questions about this Privacy Policy may be directed through the Offerly
-        website.
-      </p>
+        <p>
+          We do not sell your personal information. Data is shared only with
+          trusted infrastructure providers required to operate Offerly.
+        </p>
+
+        <h2>Data Security</h2>
+
+        <p>
+          We use reasonable technical and organizational safeguards to help
+          protect your information from unauthorized access.
+        </p>
+
+        <h2>Contact</h2>
+
+        <div className="contact-card">
+          <p>
+            Questions about this Privacy Policy?
+          </p>
+
+          <p>
+            Email us at{" "}
+            <a href="mailto:jguzmannn05@gmail.com">
+              jguzmannn05@gmail.com
+            </a>
+          </p>
+        </div>
+
+      </div>
     </div>
   );
 }

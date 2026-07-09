@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
+import { Link } from "react-router-dom";
 import "../styles/auth.css";
 
 export default function Auth() {
@@ -46,6 +47,10 @@ export default function Auth() {
 
   return (
     <div className="auth-page">
+
+      <Link to="/" className="back-to-home">
+        ← Back to Home
+      </Link>
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1 className="auth-logo">Offerly</h1>
 
