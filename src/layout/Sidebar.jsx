@@ -39,7 +39,7 @@ export default function Sidebar() {
                 </NavLink>
 
                 <NavLink to="/gmail-import">
-                    Gmail Import
+                    Gmail Sync
                 </NavLink>
 
                 <NavLink to="/calendar">
