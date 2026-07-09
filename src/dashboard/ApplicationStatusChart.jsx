@@ -6,7 +6,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-import "./dashboard.css";
+import "../styles/dashboard.css";
 
 export default function ApplicationStatusChart({ applications }) {
   const chartData = [

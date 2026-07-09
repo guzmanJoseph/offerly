@@ -1,5 +1,5 @@
 import { FiEdit2 } from "react-icons/fi";
-import "./networking.css";
+import "../styles/networking.css";
 
 export default function ContactTable({ contacts, onEdit }) {
   return (

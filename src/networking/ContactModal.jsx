@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./networking.css";
+import "../styles/networking.css";
 
 export default function ContactModal({ contact, onClose, onSave }) {
   const [formData, setFormData] = useState({

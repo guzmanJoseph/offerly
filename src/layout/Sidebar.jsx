@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import "./layout.css";
+import "../styles/layout.css";
 
 
 export default function Sidebar() {
@@ -32,7 +32,7 @@ export default function Sidebar() {
 
             <nav className="sidebar-nav">
 
-                <NavLink to="/">Dashboard</NavLink>
+                <NavLink to="/dashboard">Dashboard</NavLink>
 
                 <NavLink to="/applications">
                     Applications

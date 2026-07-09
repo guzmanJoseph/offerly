@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { supabase } from "../lib/supabaseClient";
+import "../styles/auth.css";
 
 export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
@@ -28,7 +29,7 @@ export default function Auth() {
     provider: "google",
     options: {
       scopes: "https://www.googleapis.com/auth/gmail.readonly",
-      redirectTo: window.location.origin,
+      redirectTo: `${window.location.origin}/dashboard`,
     },
   });
 

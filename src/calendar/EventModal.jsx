@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./calendar.css";
+import "../styles/calendar.css";
 
 export default function EventModal({ onClose, onSave }) {
   const [formData, setFormData] = useState({

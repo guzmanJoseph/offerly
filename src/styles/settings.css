@@ -1,0 +1,81 @@
+.settings-card {
+  background: #111827;
+  border: 1px solid #1f2937;
+  border-radius: 18px;
+  padding: 22px;
+  margin-bottom: 20px;
+}
+
+.settings-card h2 {
+  margin-bottom: 16px;
+}
+
+.settings-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 14px;
+  color: #d1d5db;
+}
+
+.settings-card input,
+.settings-card select {
+  background: #020617;
+  border: 1px solid #374151;
+  color: white;
+  border-radius: 10px;
+  padding: 11px 12px;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  padding: 14px 0;
+  border-bottom: 1px solid #1f2937;
+}
+
+.setting-row:last-child {
+  border-bottom: none;
+}
+
+.setting-row h3 {
+  margin: 0 0 4px;
+}
+
+.setting-row p {
+  margin: 0;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.primary-btn,
+.secondary-btn,
+.danger-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 11px 16px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.primary-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+.secondary-btn {
+  background: #1f2937;
+  color: white;
+  margin-right: 10px;
+}
+
+.danger-btn {
+  background: #dc2626;
+  color: white;
+}
+
+.danger-zone {
+  border-color: #7f1d1d;
+}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import "./applications.css";
+import "../styles/applications.css";
 
 export default function ApplicationModal({ application,onClose, onSave }) {
     const [formData, setFormData] = useState({
