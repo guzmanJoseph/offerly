@@ -1,8 +1,11 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "../styles/auth.css";
 
 export default function Auth() {
+  const navigate = useNavigate();
+
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,24 +22,27 @@ export default function Auth() {
       return;
     }
 
-    if (!isLogin) {
-      alert("Check your email to confirm your account.");
+    if (isLogin) {
+      navigate("/dashboard");
+      return;
     }
+
+    alert("Check your email to confirm your account.");
   }
 
   async function signInWithGoogle() {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: "google",
-    options: {
-      scopes: "https://www.googleapis.com/auth/gmail.readonly",
-      redirectTo: `${window.location.origin}/dashboard`,
-    },
-  });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        scopes: "https://www.googleapis.com/auth/gmail.readonly",
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
 
-  if (error) {
-    alert(error.message);
+    if (error) {
+      alert(error.message);
+    }
   }
-}
 
   return (
     <div className="auth-page">
