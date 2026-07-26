@@ -1,4 +1,4 @@
-import "../styles/ApplicationFunnel.css";
+import "../styles/applicationfunnel.css";
 
 export default function ApplicationFunnel({
   applications = [],
