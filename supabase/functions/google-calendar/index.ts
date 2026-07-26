@@ -119,6 +119,116 @@ Deno.serve(async (req) => {
 
     const action = body.action ?? "create";
 
+    if (action === "update") {
+      const {
+        google_event_id,
+        title,
+        start_time,
+        end_time,
+        description,
+        location,
+      } = body;
+
+      if (!google_event_id) {
+        throw new Error("google_event_id is required");
+      }
+
+      if (!title || !start_time) {
+        throw new Error(
+          "title and start_time are required"
+        );
+      }
+
+      const startDate = new Date(start_time);
+
+      const endDate = end_time
+        ? new Date(end_time)
+        : new Date(startDate.getTime() + 60 * 60 * 1000);
+
+      if (
+        Number.isNaN(startDate.getTime()) ||
+        Number.isNaN(endDate.getTime())
+      ) {
+        throw new Error("Invalid event date");
+      }
+
+      const googleResponse = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(
+          google_event_id
+        )}`,
+        {
+          method: "PATCH",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            summary: title,
+            description: description || "",
+            location: location || "",
+            start: {
+              dateTime: startDate.toISOString(),
+            },
+            end: {
+              dateTime: endDate.toISOString(),
+            },
+          }),
+        }
+      );
+
+      const responseText = await googleResponse.text();
+
+      if (!googleResponse.ok) {
+        throw new Error(
+          `Google Calendar update failed (${googleResponse.status}): ${responseText}`
+        );
+      }
+
+      const googleEvent = JSON.parse(responseText);
+
+      return jsonResponse({
+        success: true,
+        google_event_id: googleEvent.id,
+        google_event_link: googleEvent.htmlLink,
+      });
+    }
+
+    if (action === "delete") {
+      const { google_event_id } = body;
+
+      if (!google_event_id) {
+        throw new Error("google_event_id is required");
+      }
+
+      const googleResponse = await fetch(
+        `https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(
+          google_event_id
+        )}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (
+        !googleResponse.ok &&
+        googleResponse.status !== 404
+      ) {
+        const responseText =
+          await googleResponse.text();
+
+        throw new Error(
+          `Google Calendar deletion failed (${googleResponse.status}): ${responseText}`
+        );
+      }
+
+      return jsonResponse({
+        success: true,
+      });
+    }
+
     /*
       GOOGLE CALENDAR → OFFERLY
     */

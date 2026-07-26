@@ -35,7 +35,7 @@ export function getApplicationStats(applications) {
         new Date(b.created_at) -
         new Date(a.created_at)
     )
-    .slice(0, 3);
+    .slice(0, 5);
 
 
   return {

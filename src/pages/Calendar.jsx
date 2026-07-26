@@ -1,18 +1,24 @@
 import { useEffect, useState } from "react";
-
 import { supabase } from "../lib/supabaseClient";
 import CalendarView from "../calendar/CalendarView";
 import EventModal from "../calendar/EventModal";
+import EditEventModal from "./EditEventModal";
 
 export default function CalendarPage() {
   const [events, setEvents] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [googleEvents, setGoogleEvents] = useState([]);
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     fetchAllEvents();
   }, []);
 
+  function handleSelectEvent(event) {
+    setSelectedEvent(event);
+    setIsEditModalOpen(true);
+  }
   async function fetchGoogleEvents() {
     const now = new Date();
 
@@ -83,6 +89,144 @@ export default function CalendarPage() {
       fetchEvents(),
       fetchGoogleEvents(),
     ]);
+  }
+
+  async function handleDeleteEvent(event) {
+    const isGoogleOnlyEvent =
+      event.source === "google" &&
+      String(event.id).startsWith("google-");
+
+    /*
+      Delete from Google if the event exists there.
+    */
+    if (event.google_event_id) {
+      const { data, error } =
+        await supabase.functions.invoke(
+          "google-calendar",
+          {
+            body: {
+              action: "delete",
+              google_event_id:
+                event.google_event_id,
+            },
+          }
+        );
+
+      if (error || !data?.success) {
+        console.error(
+          "Google event deletion failed:",
+          error || data?.error
+        );
+
+        throw new Error(
+          data?.error ||
+            "Could not delete Google Calendar event"
+        );
+      }
+    }
+
+    /*
+      Delete from Supabase only when it is an Offerly event.
+    */
+    if (!isGoogleOnlyEvent) {
+      const { error } = await supabase
+        .from("events")
+        .delete()
+        .eq("id", event.id);
+
+      if (error) {
+        console.error(
+          "Offerly event deletion failed:",
+          error
+        );
+
+        throw error;
+      }
+    }
+
+    setIsEditModalOpen(false);
+    setSelectedEvent(null);
+
+    await fetchAllEvents();
+  }
+  
+  async function handleUpdateEvent(
+    originalEvent,
+    formData
+  ) {
+    const updatedEvent = {
+      title: formData.title.trim(),
+      event_type: formData.event_type,
+      start_time: new Date(
+        formData.start_time
+      ).toISOString(),
+      end_time: formData.end_time
+        ? new Date(formData.end_time).toISOString()
+        : null,
+      description: formData.description.trim(),
+      location: formData.location.trim(),
+    };
+
+    const isGoogleOnlyEvent =
+      originalEvent.source === "google" &&
+      String(originalEvent.id).startsWith("google-");
+
+    /*
+      Update Google when:
+      - It is a Google-only event, or
+      - It is an Offerly event previously synced to Google.
+    */
+    if (originalEvent.google_event_id) {
+      const { data, error } =
+        await supabase.functions.invoke(
+          "google-calendar",
+          {
+            body: {
+              action: "update",
+              google_event_id:
+                originalEvent.google_event_id,
+              ...updatedEvent,
+            },
+          }
+        );
+
+      if (error || !data?.success) {
+        console.error(
+          "Google event update failed:",
+          error || data?.error
+        );
+
+        throw new Error(
+          data?.error ||
+            "Could not update Google Calendar event"
+        );
+      }
+    }
+
+    /*
+      Google-only events are not in the Supabase events table,
+      so there is nothing to update there.
+    */
+    if (!isGoogleOnlyEvent) {
+      const { error } = await supabase
+        .from("events")
+        .update(updatedEvent)
+        .eq("id", originalEvent.id);
+
+      if (error) {
+        console.error(
+          "Offerly event update failed:",
+          error
+        );
+
+        throw error;
+      }
+    }
+
+    setIsEditModalOpen(false);
+    setSelectedEvent(null);
+
+    await fetchAllEvents();
   }
 
   async function handleSaveEvent(event) {
@@ -197,12 +341,27 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      <CalendarView events={combinedEvents} />
+      <CalendarView
+        events={combinedEvents}
+        onSelectEvent={handleSelectEvent} 
+      />
 
       {isModalOpen && (
         <EventModal
           onClose={() => setIsModalOpen(false)}
           onSave={handleSaveEvent}
+        />
+      )}
+
+      {isEditModalOpen && selectedEvent && (
+        <EditEventModal
+          event={selectedEvent}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setSelectedEvent(null);
+          }}
+          onSave={handleUpdateEvent}
+          onDelete={handleDeleteEvent}
         />
       )}
     </>

@@ -1,0 +1,65 @@
+.event-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.event-modal-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.delete-event-button {
+  padding: 10px 16px;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.delete-event-button:hover {
+  color: #ffffff;
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(248, 113, 113, 0.38);
+  transform: translateY(-1px);
+}
+
+.delete-event-button:disabled,
+.primary-button:disabled,
+.secondary-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.event-modal-label {
+  display: block;
+  margin-bottom: 5px;
+  color: #60a5fa;
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 600px) {
+  .event-modal-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .event-modal-actions-right {
+    align-items: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .event-modal-actions button {
+    width: 100%;
+  }
+}

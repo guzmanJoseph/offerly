@@ -1,0 +1,279 @@
+/* =========================================
+   APPLICATION FUNNEL CARD
+========================================= */
+
+.funnel-card {
+  width: 100%;
+  min-width: 0;
+  padding: 24px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(15, 25, 46, 0.98),
+    rgba(9, 17, 32, 0.98)
+  );
+
+  border: 1px solid rgba(122, 162, 247, 0.16);
+  border-radius: 18px;
+
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.funnel-card .dashboard-card-header {
+  margin-bottom: 24px;
+}
+
+.funnel-card .dashboard-card-header h2 {
+  margin: 0;
+
+  color: #f8fafc;
+
+  font-size: 1rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+}
+
+.funnel-card .dashboard-card-header p {
+  margin: 6px 0 0;
+
+  color: #7084a6;
+
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* =========================================
+   FUNNEL FLOW
+========================================= */
+
+.application-funnel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  width: 100%;
+}
+
+.funnel-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  width: 100%;
+}
+
+/* All boxes are the same size */
+
+.funnel-stage-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  width: 260px !important;
+  height: 78px;
+  min-height: 78px;
+  padding: 14px 16px;
+
+  background: linear-gradient(
+    145deg,
+    rgba(24, 48, 91, 0.92),
+    rgba(16, 35, 68, 0.96)
+  );
+
+  border: 1px solid rgba(76, 139, 255, 0.34);
+  border-radius: 14px;
+
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.13),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.funnel-stage-bar:hover {
+  transform: translateY(-2px);
+
+  border-color: rgba(96, 165, 250, 0.54);
+
+  background: linear-gradient(
+    145deg,
+    rgba(28, 57, 106, 0.96),
+    rgba(18, 40, 78, 0.98)
+  );
+}
+
+/* Label and number stack vertically */
+
+.funnel-stage-bar > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+
+  min-width: 0;
+}
+
+.funnel-stage-label {
+  display: block;
+
+  color: #8fa4c5;
+
+  font-size: 0.69rem;
+  font-weight: 750;
+  letter-spacing: 0.065em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.funnel-stage-bar strong {
+  display: block;
+
+  color: #f8fafc;
+
+  font-size: 1.4rem;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.035em;
+}
+
+.funnel-percentage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+  min-width: 44px;
+  padding: 6px 8px;
+
+  color: #c5dcff;
+  background: rgba(51, 111, 205, 0.24);
+
+  border: 1px solid rgba(96, 165, 250, 0.24);
+  border-radius: 999px;
+
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+/* =========================================
+   CONNECTORS
+========================================= */
+
+.funnel-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 24px;
+  height: 28px;
+
+  color: #5597e8;
+
+  font-size: 1rem;
+  font-weight: 500;
+  line-height: 1;
+}
+
+/* =========================================
+   OUTCOMES
+========================================= */
+
+.funnel-outcomes {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+
+  width: 100%;
+  margin-top: 22px;
+  padding-top: 18px;
+
+  border-top: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.funnel-outcome {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+
+  min-width: 0;
+  min-height: 76px;
+  padding: 14px 16px;
+
+  background: rgba(17, 28, 49, 0.72);
+
+  border: 1px solid rgba(125, 155, 205, 0.12);
+  border-radius: 13px;
+}
+
+/* Outcome label/value stack */
+
+.funnel-outcome > div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 7px;
+
+  min-width: 0;
+}
+
+.funnel-outcome > div > span {
+  color: #768aaa;
+
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.funnel-outcome strong {
+  color: #f8fafc;
+
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.funnel-outcome-rate {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  flex-shrink: 0;
+  min-width: 44px;
+  padding: 6px 8px;
+
+  color: #c5dcff;
+  background: rgba(51, 111, 205, 0.2);
+
+  border: 1px solid rgba(96, 165, 250, 0.2);
+  border-radius: 999px;
+
+  font-size: 0.68rem;
+  font-weight: 750;
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 700px) {
+  .funnel-card {
+    padding: 19px;
+  }
+
+  .funnel-stage-bar {
+    width: min(100%, 260px) !important;
+  }
+
+  .funnel-outcomes {
+    grid-template-columns: 1fr;
+  }
+}

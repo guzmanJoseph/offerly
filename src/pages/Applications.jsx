@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import "../styles/applications.css";
 
 import { supabase } from "../lib/supabaseClient";
 

@@ -1,0 +1,333 @@
+/* =========================================
+   APPLICATIONS OVER TIME CARD
+========================================= */
+
+.applications-over-time-card {
+  position: relative;
+  overflow: hidden;
+
+  display: flex;
+  flex-direction: column;
+
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 24px;
+
+  background: linear-gradient(
+    180deg,
+    rgba(15, 25, 46, 0.98) 0%,
+    rgba(10, 18, 34, 0.98) 100%
+  );
+
+  border: 1px solid rgba(122, 162, 247, 0.16);
+  border-radius: 18px;
+
+  box-shadow:
+    0 14px 36px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.applications-over-time-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 24px;
+  left: 24px;
+
+  height: 1px;
+
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(93, 153, 255, 0.55),
+    transparent
+  );
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.applications-over-time-card .dashboard-card-header {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+
+  margin-bottom: 20px;
+}
+
+.applications-over-time-card .dashboard-card-header h2 {
+  margin: 0;
+
+  color: #f8fafc;
+
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.applications-over-time-card .dashboard-card-header p {
+  margin: 5px 0 0;
+
+  color: #7084a6;
+
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* =========================================
+   SUMMARY CARDS
+========================================= */
+
+.applications-over-time-summary {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+
+  margin-bottom: 24px;
+}
+
+.applications-over-time-summary > div {
+  position: relative;
+  overflow: hidden;
+
+  min-width: 0;
+  padding: 14px 15px;
+
+  background: rgba(20, 32, 56, 0.72);
+
+  border: 1px solid rgba(126, 156, 207, 0.12);
+  border-radius: 12px;
+
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background-color 160ms ease;
+}
+
+.applications-over-time-summary > div:hover {
+  transform: translateY(-1px);
+
+  background: rgba(23, 37, 65, 0.88);
+  border-color: rgba(94, 149, 255, 0.24);
+}
+
+.applications-over-time-summary > div::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+
+  height: 2px;
+
+  background: linear-gradient(
+    90deg,
+    rgba(71, 128, 255, 0.75),
+    rgba(125, 92, 255, 0.35)
+  );
+
+  opacity: 0.55;
+}
+
+.applications-over-time-summary span {
+  display: block;
+
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  color: #6f86ab;
+
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.applications-over-time-summary strong {
+  display: block;
+
+  margin-top: 7px;
+
+  color: #f8fafc;
+
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+}
+
+/* =========================================
+   CHART
+========================================= */
+
+.applications-over-time-chart {
+  position: relative;
+  z-index: 1;
+
+  flex: 1;
+
+  width: 100%;
+  min-height: 400px;
+  padding: 14px 10px 4px;
+
+  background: rgba(8, 16, 31, 0.3);
+
+  border: 1px solid rgba(121, 151, 202, 0.08);
+  border-radius: 14px;
+}
+
+.applications-over-time-chart canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* =========================================
+   EMPTY STATE
+========================================= */
+
+.applications-over-time-empty {
+  position: relative;
+  z-index: 1;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+
+  flex: 1;
+
+  min-height: 400px;
+  padding: 32px;
+
+  background: rgba(8, 16, 31, 0.28);
+
+  border: 1px dashed rgba(120, 154, 210, 0.18);
+  border-radius: 14px;
+
+  text-align: center;
+}
+
+.applications-over-time-empty strong {
+  color: #e7edf8;
+
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.applications-over-time-empty p {
+  max-width: 280px;
+  margin: 7px 0 0;
+
+  color: #6f83a3;
+
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+/* =========================================
+   ANALYTICS GRID
+========================================= */
+
+.dashboard-analytics-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(360px, 0.8fr)
+    minmax(0, 1.2fr);
+
+  gap: 18px;
+  align-items: stretch;
+}
+
+.dashboard-analytics-grid > * {
+  min-width: 0;
+  height: 100%;
+}
+
+/* =========================================
+   TABLET
+========================================= */
+
+@media (max-width: 1100px) {
+  .dashboard-analytics-grid {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .dashboard-analytics-grid > * {
+    height: auto;
+  }
+
+  .applications-over-time-card {
+    height: auto;
+  }
+
+  .applications-over-time-chart {
+    flex: none;
+    height: 320px;
+    min-height: 320px;
+  }
+
+  .applications-over-time-empty {
+    flex: none;
+    min-height: 320px;
+  }
+}
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 700px) {
+  .applications-over-time-card {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .applications-over-time-card::before {
+    right: 18px;
+    left: 18px;
+  }
+
+  .applications-over-time-summary {
+    grid-template-columns: 1fr;
+    gap: 9px;
+
+    margin-bottom: 18px;
+  }
+
+  .applications-over-time-summary > div {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    padding: 12px 14px;
+  }
+
+  .applications-over-time-summary strong {
+    margin-top: 0;
+
+    font-size: 1rem;
+  }
+
+  .applications-over-time-chart {
+    height: 255px;
+    min-height: 255px;
+
+    padding: 10px 4px 2px;
+  }
+
+  .applications-over-time-empty {
+    min-height: 255px;
+    padding: 24px;
+  }
+}
