@@ -1,0 +1,28 @@
+name: Automatic Gmail Sync
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"
+
+  workflow_dispatch:
+
+jobs:
+  sync-gmail:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Invoke scan-gmail Edge Function
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          response=$(curl --silent --show-error --fail-with-body \
+            --request POST \
+            "${SUPABASE_URL}/functions/v1/scan-gmail" \
+            --header "Authorization: Bearer ${SUPABASE_ANON_KEY}" \
+            --header "apikey: ${SUPABASE_ANON_KEY}" \
+            --header "Content-Type: application/json" \
+            --data '{}')
+
+          echo "Function response:"
+          echo "$response"
