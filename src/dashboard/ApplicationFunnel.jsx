@@ -1,3 +1,4 @@
+// should be fixed
 import "../styles/applicationfunnel.css";
 
 export default function ApplicationFunnel({
