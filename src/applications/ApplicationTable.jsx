@@ -64,7 +64,7 @@ export default function ApplicationTable({
 
                     ))}
 
-</tbody>
+                </tbody>
 
             </table>
 

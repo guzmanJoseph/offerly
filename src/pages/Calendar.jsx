@@ -7,11 +7,63 @@ import EventModal from "../calendar/EventModal";
 export default function CalendarPage() {
   const [events, setEvents] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [googleEvents, setGoogleEvents] = useState([]);
 
   useEffect(() => {
-    fetchEvents();
+    fetchAllEvents();
   }, []);
 
+  async function fetchGoogleEvents() {
+    const now = new Date();
+
+    const rangeStart = new Date(
+      now.getFullYear(),
+      now.getMonth() - 3,
+      1
+    );
+
+    const rangeEnd = new Date(
+      now.getFullYear(),
+      now.getMonth() + 7,
+      1
+    );
+
+    const { data, error } =
+      await supabase.functions.invoke(
+        "google-calendar",
+        {
+          body: {
+            action: "list",
+            timeMin:
+              rangeStart.toISOString(),
+            timeMax:
+              rangeEnd.toISOString(),
+          },
+        }
+      );
+
+    if (error) {
+      console.error(
+        "Could not load Google events:",
+        error
+      );
+
+      setGoogleEvents([]);
+      return;
+    }
+
+    if (!data?.success) {
+      console.error(
+        "Google Calendar error:",
+        data?.error
+      );
+
+      setGoogleEvents([]);
+      return;
+    }
+
+    setGoogleEvents(data.events ?? []);
+  }
   async function fetchEvents() {
     const { data, error } = await supabase
       .from("events")
@@ -24,6 +76,13 @@ export default function CalendarPage() {
     }
 
     setEvents(data);
+  }
+
+  async function fetchAllEvents() {
+    await Promise.all([
+      fetchEvents(),
+      fetchGoogleEvents(),
+    ]);
   }
 
   async function handleSaveEvent(event) {
@@ -103,6 +162,28 @@ export default function CalendarPage() {
     await fetchEvents();
   }
 
+  const syncedGoogleIds = new Set(
+  events
+    .map(
+      (event) =>
+        event.google_event_id
+    )
+    .filter(Boolean)
+);
+
+  const uniqueGoogleEvents =
+    googleEvents.filter(
+      (event) =>
+        !syncedGoogleIds.has(
+          event.google_event_id
+        )
+    );
+
+  const combinedEvents = [
+    ...events,
+    ...uniqueGoogleEvents,
+  ];
+
   return (
     <>
       <div className="page-header">
@@ -116,7 +197,7 @@ export default function CalendarPage() {
         </button>
       </div>
 
-      <CalendarView events={events} />
+      <CalendarView events={combinedEvents} />
 
       {isModalOpen && (
         <EventModal

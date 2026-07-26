@@ -26,13 +26,9 @@ export default function ApplicationStatusChart({ applications }) {
       name: "Rejected",
       value: applications.filter(app => app.status === "Rejected").length,
     },
-    {
-      name: "Ghosted",
-      value: applications.filter(app => app.status === "Ghosted").length,
-    },
   ];
 
-  const colors = ["#2563eb", "#7c3aed", "#16a34a", "#dc2626", "#64748b"];
+  const colors = ["#2563eb", "#7c3aed", "#16a34a", "#dc2626"];
 
   return (
     <div className="chart-card">

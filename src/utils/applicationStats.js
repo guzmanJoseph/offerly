@@ -13,10 +13,6 @@ export function getApplicationStats(applications) {
     app.status === "Rejected"
   ).length;
 
-  const ghosted = applications.filter(app =>
-    app.status === "Ghosted"
-  ).length;
-
   const responses = interviews + offers + rejections;
 
   const responseRate = total
@@ -47,7 +43,6 @@ export function getApplicationStats(applications) {
     interviews,
     offers,
     rejections,
-    ghosted,
     responseRate,
     interviewRate,
     offerRate,

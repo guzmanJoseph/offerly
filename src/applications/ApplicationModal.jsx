@@ -79,7 +79,6 @@ export default function ApplicationModal({ application,onClose, onSave }) {
           <option>Interview</option>
           <option>Offer</option>
           <option>Rejected</option>
-          <option>Ghosted</option>
         </select>
 
         <select name="priority" value={formData.priority} onChange={handleChange}>
