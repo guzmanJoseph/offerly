@@ -364,7 +364,6 @@
   .stat-card:has(.stat-list) {
     grid-column: span 1;
   }
-}
 
 @media (max-width: 620px) {
   .dashboard-page {
