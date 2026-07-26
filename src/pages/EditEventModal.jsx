@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import "../styles/EditEventModal.css";
+import "../styles/editeventmodal.css";
 function toDateTimeLocal(value) {
   if (!value) return "";
 

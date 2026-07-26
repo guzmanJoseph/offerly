@@ -1,6 +1,5 @@
 import { Line } from "react-chartjs-2";
-import "../styles/ApplicationsOverTime.css";
-
+import "../styles/applicationsovertime.css";
 
 import {
   Chart as ChartJS,
