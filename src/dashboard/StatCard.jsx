@@ -1,10 +1,17 @@
-export default function StatCard({ title, value }) {
+export default function StatCard({
+  title,
+  value,
+  children,
+}) {
+  return (
+    <div className="stat-card">
+      <h3>{title}</h3>
 
-    return (
-        <div className="stat-card">
-            <p>{title}</p>
-
-            <h2>{value}</h2>
-        </div>
-    );
+      {children ? (
+        children
+      ) : (
+        <h2>{value}</h2>
+      )}
+    </div>
+  );
 }

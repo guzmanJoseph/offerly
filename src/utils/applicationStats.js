@@ -31,6 +31,17 @@ export function getApplicationStats(applications) {
     ? Math.round((offers / total) * 100)
     : 0;
 
+  const upcomingInterviews = [];
+
+  const recentApplications = [...applications]
+    .sort(
+      (a, b) =>
+        new Date(b.created_at) -
+        new Date(a.created_at)
+    )
+    .slice(0, 3);
+
+
   return {
     total,
     interviews,
@@ -39,6 +50,8 @@ export function getApplicationStats(applications) {
     ghosted,
     responseRate,
     interviewRate,
-    offerRate
+    offerRate,
+    upcomingInterviews,
+    recentApplications,
   };
 }

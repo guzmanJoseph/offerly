@@ -7,14 +7,15 @@ export default function EventModal({ onClose, onSave }) {
     event_type: "Reminder",
     start_time: "",
     description: "",
+    add_to_google_calendar: true,
   });
 
   function handleChange(e) {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
 
     setFormData(prev => ({
       ...prev,
-      [name]: value,
+      [name]: type === "checkbox" ? checked : value,
     }));
   }
 
@@ -66,6 +67,17 @@ export default function EventModal({ onClose, onSave }) {
           value={formData.description}
           onChange={handleChange}
         />
+
+        <label className="calendar-checkbox">
+          <input
+            type="checkbox"
+            name="add_to_google_calendar"
+            checked={formData.add_to_google_calendar}
+            onChange={handleChange}
+          />
+
+          Add this event to Google Calendar
+        </label>
 
         <button className="save-button" type="submit">
           Save Event

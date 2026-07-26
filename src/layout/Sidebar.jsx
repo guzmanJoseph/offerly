@@ -32,7 +32,9 @@ export default function Sidebar() {
 
             <nav className="sidebar-nav">
 
-                <NavLink to="/dashboard">Dashboard</NavLink>
+                <NavLink to="/dashboard">
+                    Dashboard
+                </NavLink>
 
                 <NavLink to="/applications">
                     Applications

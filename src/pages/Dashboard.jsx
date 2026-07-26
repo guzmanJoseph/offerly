@@ -80,15 +80,32 @@ export default function Dashboard() {
                     value={`${stats.offerRate}%`}
                 />
 
-                <StatCard
-                    title="Upcoming Interviews"
-                    value={stats.upcomingInterviews}
-                />
+                <StatCard title="Upcoming Interviews">
+                    <ul className="stat-list">
+                        {stats.upcomingInterviews.map((interview) => (
+                        <li key={interview.id}>
+                            <strong>{interview.company}</strong>
+                            <div>
+                            {new Date(
+                                interview.interview_date ??
+                                interview.start_time
+                            ).toLocaleDateString()}
+                            </div>
+                        </li>
+                        ))}
+                    </ul>
+                </StatCard>
 
-                <StatCard
-                    title="Recent Applications"
-                    value={stats.recentApplications}
-                />
+                <StatCard title="Recent Applications">
+                    <ul className="stat-list">
+                        {stats.recentApplications.map((app) => (
+                        <li key={app.id}>
+                            <strong>{app.company}</strong>
+                            <div>{app.role}</div>
+                        </li>
+                        ))}
+                    </ul>
+                </StatCard>
 
             </div>
 
