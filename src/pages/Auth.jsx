@@ -27,8 +27,6 @@ export default function Auth() {
       navigate("/dashboard");
       return;
     }
-
-    alert("Check your email to confirm your account.");
   }
 
   async function signInWithGoogle() {

@@ -66,11 +66,6 @@ export default function Dashboard() {
                 />
 
                 <StatCard
-                    title="Ghosted"
-                    value={stats.ghosted}
-                />
-
-                <StatCard
                     title="Response Rate"
                     value={`${stats.responseRate}%`}
                 />

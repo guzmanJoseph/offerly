@@ -53,84 +53,125 @@ export default function GmailImport() {
   }
 
   async function handleConnectGmail() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        scopes: "https://www.googleapis.com/auth/gmail.readonly",
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
-        redirectTo: `${window.location.origin}/gmail-import`,
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      scopes: [
+        "openid",
+        "email",
+        "profile",
+        "https://www.googleapis.com/auth/gmail.readonly",
+      ].join(" "),
+      queryParams: {
+        access_type: "offline",
+        prompt: "consent",
       },
-    });
+      redirectTo: `${window.location.origin}/gmail-import`,
+    },
+  });
 
-    if (error) {
-      console.error("Error saving Gmail connection:", {
-        message: error.message,
-        details: error.details,
-        hint: error.hint,
-        code: error.code,
-});
+  if (error) {
+    console.error("Google connection failed:", {
+      message: error.message,
+      details: error.details,
+      hint: error.hint,
+      code: error.code,
+    });
+  }
+}
+
+  async function saveGmailConnection() {
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession();
+
+  if (sessionError) {
+    console.error("Could not get session:", sessionError);
+    return;
+  }
+
+  if (!session?.user) return;
+
+  const providerToken = session.provider_token;
+  const providerRefreshToken =
+    session.provider_refresh_token;
+
+  console.log("Google token status:", {
+    hasProviderToken: Boolean(providerToken),
+    hasProviderRefreshToken: Boolean(
+      providerRefreshToken
+    ),
+  });
+
+  // Do not create or overwrite the database row
+  // unless Google returned a refresh token.
+  if (!providerRefreshToken) {
+    console.log(
+      "No Google refresh token found. Reconnect Gmail and approve access."
+    );
+    return;
+  }
+
+  let googleEmail = session.user.email;
+
+  if (providerToken) {
+    try {
+      const googleUserResponse = await fetch(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        {
+          headers: {
+            Authorization: `Bearer ${providerToken}`,
+          },
+        }
+      );
+
+      if (googleUserResponse.ok) {
+        const googleUser =
+          await googleUserResponse.json();
+
+        googleEmail =
+          googleUser.email || googleEmail;
+      }
+    } catch (error) {
+      console.error(
+        "Could not retrieve Google account email:",
+        error
+      );
     }
   }
 
-  async function saveGmailConnection() {
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session?.user) return;
-
-    const providerToken = session.provider_token;
-    const providerRefreshToken = session.provider_refresh_token;
-
-    if (!providerToken) {
-      console.log("No Google provider token found yet.");
-      return;
-    }
-
-    const googleUserRes = await fetch(
-      "https://www.googleapis.com/oauth2/v2/userinfo",
+  const { error: upsertError } = await supabase
+    .from("gmail_connections")
+    .upsert(
       {
-        headers: {
-          Authorization: `Bearer ${providerToken}`,
-        },
+        user_id: session.user.id,
+        email: googleEmail,
+        access_token: providerToken || null,
+        refresh_token: providerRefreshToken,
+        is_connected: true,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "user_id",
       }
     );
 
-    const googleUser = await googleUserRes.json();
+  if (upsertError) {
+    console.error("Error saving Gmail connection:", {
+      message: upsertError.message,
+      details: upsertError.details,
+      hint: upsertError.hint,
+      code: upsertError.code,
+    });
 
-    const payload = {
-      user_id: session.user.id,
-      email: googleUser.email,
-      access_token: session.provider_token,
-      is_connected: true,
-      updated_at: new Date().toISOString(),
-    };
-
-    if (session.provider_refresh_token) {
-      payload.refresh_token = session.provider_refresh_token;
-    }
-
-    const { error: upsertError } = await supabase
-      .from("gmail_connections")
-      .upsert(payload, {
-        onConflict: "user_id",
-      });
-
-    if (upsertError) {
-      console.error("Error saving Gmail connection:", {
-        message: upsertError.message,
-        details: upsertError.details,
-        hint: upsertError.hint,
-        code: upsertError.code,
-  });
-  return;
-}
-
-      fetchConnection();
+    return;
   }
+
+  console.log(
+    "Gmail refresh token saved successfully."
+  );
+}
 
   async function fetchSyncLogs() {
     const {
