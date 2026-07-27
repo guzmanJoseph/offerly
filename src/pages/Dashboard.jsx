@@ -26,14 +26,16 @@ export default function Dashboard() {
             c => c.status === "Awaiting Response"
         ).length,
 
-        followUpsDue: contacts.filter(c => {
-            if (!c.next_follow_up) return false;
-
-            const date = new Date(c.next_follow_up);
-            date.setHours(0,0,0,0);
-
-            return date <= today;
-        }).length,
+        activeConversations: contacts.filter(contact =>
+            [
+                "Coffee Chat Scheduled",
+                "Responded",
+                "Interview Scheduled",
+                "Referral Received",
+                "Connected",
+                "Reached Out"
+            ].includes(contact.status)
+        ).length,
 
         referrals: contacts.filter(
             c => c.status === "Referred"
@@ -558,10 +560,11 @@ export default function Dashboard() {
 
                     <div className="network-stat">
                         <span className="network-stat-value followups">
-                            {networkStats.followUpsDue}
+                            {networkStats.activeConversations}
                         </span>
+
                         <span className="network-stat-label">
-                            Follow-ups Due
+                            Active Conversations
                         </span>
                     </div>
 
@@ -576,7 +579,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="network-followups-header">
-                    <h3>Upcoming Follow-ups</h3>
+                    <h3>Active Conversations</h3>
 
                     <button
                         type="button"
@@ -589,7 +592,18 @@ export default function Dashboard() {
 
                     {upcomingFollowUps.length > 0 ? (
                     <div className="network-followups-list">
-                        {upcomingFollowUps.slice(0, 3).map((contact) => (
+                        {contacts
+                            .filter(contact =>
+                                [
+                                    "Awaiting Response",
+                                    "Coffee Chat Scheduled",
+                                    "Responded",
+                                    "Interview Scheduled",
+                                    "Referral Received",
+                                ].includes(contact.status)
+                            )
+                            .slice(0, 3)
+                            .map((contact) => (
                         <div
                             key={contact.id}
                             className="network-followup-item"
@@ -608,12 +622,8 @@ export default function Dashboard() {
                             </p>
                             </div>
 
-                            <span
-                            className={`network-followup-date ${
-                                contact.isOverdue ? "overdue" : ""
-                            }`}
-                            >
-                            {contact.followUpLabel}
+                            <span className={`network-status ${contact.status?.toLowerCase().replace(/\s+/g, "-")}`}>
+                                {contact.status}
                             </span>
                         </div>
                         ))}
@@ -622,11 +632,10 @@ export default function Dashboard() {
                     <div className="network-empty-state">
                         <div className="network-empty-icon">🤝</div>
 
-                        <h3>No upcoming follow-ups</h3>
+                        <h3>No active conversations</h3>
 
                         <p>
-                        Add contacts and schedule follow-ups to start building your
-                        professional network.
+                            Start reaching out to your contacts and active conversations will appear here.
                         </p>
 
                         <button

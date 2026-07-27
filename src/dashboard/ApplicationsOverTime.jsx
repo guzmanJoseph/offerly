@@ -51,21 +51,37 @@ function formatWeekLabel(date) {
   })}`;
 }
 
+function parseApplicationDate(value) {
+  if (!value) return null;
+
+  // Prevent YYYY-MM-DD dates from being interpreted as UTC.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  const parsedDate = new Date(value);
+
+  return Number.isNaN(parsedDate.getTime())
+    ? null
+    : parsedDate;
+}
+
 export default function ApplicationsOverTime({
   applications = [],
 }) {
   const validApplications = applications
     .map((application) => {
       const dateValue =
+        application.created_at ??
         application.applied_date ??
-        application.date_applied ??
-        application.created_at;
+        application.date_applied;
 
       if (!dateValue) return null;
 
       const parsedDate = new Date(dateValue);
 
-      if (Number.isNaN(parsedDate.getTime())) {
+      if (!parsedDate) {
         return null;
       }
 

@@ -287,17 +287,6 @@ export default function ContactModal({
                 />
               </label>
 
-              <label className="contact-field">
-                <span>Next follow-up</span>
-
-                <input
-                  name="next_follow_up"
-                  type="date"
-                  value={formData.next_follow_up}
-                  onChange={handleChange}
-                />
-              </label>
-
               <label className="contact-field contact-field-full">
                 <span>Notes</span>
 
