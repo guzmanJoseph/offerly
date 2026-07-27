@@ -4,18 +4,80 @@ import { supabase } from "../lib/supabaseClient";
 import ApplicationFunnel from "../dashboard/ApplicationFunnel";
 import StatCard from "../dashboard/StatCard";
 import ApplicationsOverTime from "../dashboard/ApplicationsOverTime";
-
+import { useNavigate } from "react-router-dom";
 import { getApplicationStats } from "../utils/applicationStats";
 
 export default function Dashboard() {
-
+    const navigate = useNavigate();
     const [applications, setApplications] = useState([]);
     const [nextActions, setNextActions] = useState([]);
     const [generatingActions, setGeneratingActions] = useState(false);
     const [actionsError, setActionsError] = useState("");
+    const [contacts, setContacts] = useState([]);
+    const stats = getApplicationStats(applications);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const networkStats = {
+        total: contacts.length,
+
+        awaitingResponse: contacts.filter(
+            c => c.status === "Awaiting Response"
+        ).length,
+
+        followUpsDue: contacts.filter(c => {
+            if (!c.next_follow_up) return false;
+
+            const date = new Date(c.next_follow_up);
+            date.setHours(0,0,0,0);
+
+            return date <= today;
+        }).length,
+
+        referrals: contacts.filter(
+            c => c.status === "Referred"
+        ).length
+    };
+
+    const upcomingFollowUps = contacts
+        .filter(c => c.next_follow_up)
+        .map(contact => {
+            const followUpDate = new Date(contact.next_follow_up);
+
+            followUpDate.setHours(0,0,0,0);
+
+            const diff = Math.round(
+                (followUpDate - today) /
+                (1000*60*60*24)
+            );
+
+            let label;
+
+            if (diff < 0)
+                label = "Overdue";
+            else if (diff === 0)
+                label = "Today";
+            else if (diff === 1)
+                label = "Tomorrow";
+            else
+                label = followUpDate.toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric"
+                });
+
+            return {
+                ...contact,
+                followUpLabel: label,
+                followUpDate,
+                isOverdue: diff < 0
+            };
+        })
+        .sort((a,b)=>a.followUpDate-b.followUpDate);
 
     useEffect(() => {
         fetchApplications();
+        fetchContacts();
     }, []);
 
     function normalizeText(value = "") {
@@ -75,6 +137,19 @@ export default function Dashboard() {
         );
     }
 
+    async function fetchContacts() {
+        const { data, error } = await supabase
+            .from("contacts")
+            .select("*")
+            .order("next_follow_up", { ascending: true });
+
+        if (error) {
+            console.error(error);
+            return;
+        }
+
+        setContacts(data ?? []);
+    }
     async function fetchUpcomingCalendarEvents() {
         const now = new Date();
 
@@ -445,8 +520,6 @@ export default function Dashboard() {
         setApplications(data);
     }
 
-    const stats = getApplicationStats(applications);
-
     return (
         <div className="dashboard-page">
             <div className="page-header">
@@ -462,59 +535,109 @@ export default function Dashboard() {
             </div>
 
             <div className="dashboard-top-grid">
-            <StatCard title="Upcoming & Next Actions">
-                <div className="next-actions-list">
-                {nextActions.length > 0 ? (
-                    nextActions.map((action) => (
-                    <div
-                        key={action.id}
-                        className="next-action-item"
-                    >
-                        <div className={`action-icon ${action.type}`}>
-                        {action.icon}
-                        </div>
-
-                        <div className="action-info">
-                        <h4>{action.title}</h4>
-                        <p>{action.subtitle}</p>
-                        </div>
-
-                        <span className="action-date">
-                        {action.date}
+            <StatCard title="Professional Network">
+                <div className="network-pipeline">
+                    <div className="network-stats-grid">
+                    <div className="network-stat">
+                        <span className="network-stat-value total">
+                            {networkStats.total}
+                        </span>
+                        <span className="network-stat-label">
+                            Total Contacts
                         </span>
                     </div>
-                    ))
-                ) : (
-                    <div className="empty-actions">
-                    <div className="empty-actions-icon">
-                        ✨
+
+                    <div className="network-stat">
+                        <span className="network-stat-value awaiting">
+                            {networkStats.awaitingResponse}
+                        </span>
+                        <span className="network-stat-label">
+                            Awaiting Response
+                        </span>
                     </div>
 
-                    <h3>Nothing scheduled</h3>
+                    <div className="network-stat">
+                        <span className="network-stat-value followups">
+                            {networkStats.followUpsDue}
+                        </span>
+                        <span className="network-stat-label">
+                            Follow-ups Due
+                        </span>
+                    </div>
 
-                    <p>
-                        You're all caught up. Generate a few suggestions
-                        to keep your job search moving.
-                    </p>
+                    <div className="network-stat">
+                        <span className="network-stat-value referrals">
+                            {networkStats.referrals}
+                        </span>
+                        <span className="network-stat-label">
+                            Referrals
+                        </span>
+                    </div>
+                    </div>
+
+                    <div className="network-followups-header">
+                    <h3>Upcoming Follow-ups</h3>
 
                     <button
                         type="button"
-                        className="generate-actions-button"
-                        onClick={handleGenerateActions}
-                        disabled={generatingActions}
+                        className="network-view-all"
+                        onClick={() => navigate("/networking")}
                     >
-                        {generatingActions
-                            ? "Reviewing your schedule..."
-                            : "Generate Smart Suggestions"}
-                        </button>
-
-                    {actionsError && (
-                        <p className="actions-error">
-                            {actionsError}
-                        </p>
-                    )}
+                        View all
+                    </button>
                     </div>
-                )}
+
+                    {upcomingFollowUps.length > 0 ? (
+                    <div className="network-followups-list">
+                        {upcomingFollowUps.slice(0, 3).map((contact) => (
+                        <div
+                            key={contact.id}
+                            className="network-followup-item"
+                        >
+                            <div className="network-contact-avatar">
+                            {contact.name?.charAt(0).toUpperCase() || "?"}
+                            </div>
+
+                            <div className="network-contact-info">
+                            <h4>{contact.name}</h4>
+
+                            <p>
+                                {[contact.role, contact.company]
+                                .filter(Boolean)
+                                .join(" at ") || "No company added"}
+                            </p>
+                            </div>
+
+                            <span
+                            className={`network-followup-date ${
+                                contact.isOverdue ? "overdue" : ""
+                            }`}
+                            >
+                            {contact.followUpLabel}
+                            </span>
+                        </div>
+                        ))}
+                    </div>
+                    ) : (
+                    <div className="network-empty-state">
+                        <div className="network-empty-icon">🤝</div>
+
+                        <h3>No upcoming follow-ups</h3>
+
+                        <p>
+                        Add contacts and schedule follow-ups to start building your
+                        professional network.
+                        </p>
+
+                        <button
+                        type="button"
+                        className="network-add-contact-button"
+                        onClick={() => navigate("/networking")}
+                        >
+                        Add Contact
+                        </button>
+                    </div>
+                    )}
                 </div>
             </StatCard>
 

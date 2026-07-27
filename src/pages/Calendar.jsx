@@ -96,58 +96,127 @@ export default function CalendarPage() {
       event.source === "google" &&
       String(event.id).startsWith("google-");
 
-    /*
-      Delete from Google if the event exists there.
-    */
-    if (event.google_event_id) {
-      const { data, error } =
-        await supabase.functions.invoke(
-          "google-calendar",
-          {
-            body: {
-              action: "delete",
-              google_event_id:
-                event.google_event_id,
-            },
+    try {
+      /*
+        Google-only event:
+        It has no row in Offerly, so delete only from Google.
+      */
+      if (isGoogleOnlyEvent) {
+        const { data, error } =
+          await supabase.functions.invoke(
+            "google-calendar",
+            {
+              body: {
+                action: "delete",
+                google_event_id: event.google_event_id,
+              },
+            }
+          );
+
+        if (error || !data?.success) {
+          console.error(
+            "Google event deletion failed:",
+            error,
+            data
+          );
+
+          throw new Error(
+            data?.error ||
+              "Could not delete the Google Calendar event."
+          );
+        }
+      } else {
+        /*
+          Offerly event:
+          Delete the database row first.
+        */
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError || !user) {
+          throw new Error(
+            "You must be logged in to delete this event."
+          );
+        }
+
+        const { data: deletedEvents, error: deleteError } =
+          await supabase
+            .from("events")
+            .delete()
+            .eq("id", event.id)
+            .eq("user_id", user.id)
+            .select("id");
+
+        if (deleteError) {
+          console.error(
+            "Offerly event deletion failed:",
+            deleteError
+          );
+
+          throw deleteError;
+        }
+
+        if (!deletedEvents?.length) {
+          throw new Error(
+            "No matching Offerly event was deleted."
+          );
+        }
+
+        /*
+          Then try removing the synced Google copy.
+          Do not restore or block the Offerly deletion if Google fails.
+        */
+        if (event.google_event_id) {
+          const { data, error } =
+            await supabase.functions.invoke(
+              "google-calendar",
+              {
+                body: {
+                  action: "delete",
+                  google_event_id:
+                    event.google_event_id,
+                },
+              }
+            );
+
+          if (error || !data?.success) {
+            console.error(
+              "Offerly was deleted, but Google deletion failed:",
+              error,
+              data
+            );
+
+            alert(
+              "The event was deleted from Offerly, but its Google Calendar copy could not be deleted."
+            );
           }
-        );
-
-      if (error || !data?.success) {
-        console.error(
-          "Google event deletion failed:",
-          error || data?.error
-        );
-
-        throw new Error(
-          data?.error ||
-            "Could not delete Google Calendar event"
-        );
+        }
       }
+
+      setEvents((currentEvents) =>
+        currentEvents.filter(
+          (currentEvent) =>
+            currentEvent.id !== event.id
+        )
+      );
+
+      setIsEditModalOpen(false);
+      setSelectedEvent(null);
+
+      await fetchAllEvents();
+    } catch (error) {
+      console.error(
+        "Event deletion failed:",
+        error
+      );
+
+      alert(
+        error.message ||
+          "The event could not be deleted."
+      );
     }
-
-    /*
-      Delete from Supabase only when it is an Offerly event.
-    */
-    if (!isGoogleOnlyEvent) {
-      const { error } = await supabase
-        .from("events")
-        .delete()
-        .eq("id", event.id);
-
-      if (error) {
-        console.error(
-          "Offerly event deletion failed:",
-          error
-        );
-
-        throw error;
-      }
-    }
-
-    setIsEditModalOpen(false);
-    setSelectedEvent(null);
-
-    await fetchAllEvents();
   }
   
   async function handleUpdateEvent(
