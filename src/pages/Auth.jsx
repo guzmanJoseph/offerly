@@ -97,7 +97,7 @@ export default function Auth() {
           className="auth-google-button"
           onClick={signInWithGoogle}
         >
-          Continue with Google
+          Connect your Google account to sync Gmail and Calendar.
         </button>
 
         <p className="auth-switch" onClick={() => setIsLogin(!isLogin)}>
