@@ -413,28 +413,6 @@ enabled = true
 # JSON string passed through to pg-delta SQL formatting.
 # format_options = "{\"keywordCase\":\"upper\",\"indent\":2,\"maxWidth\":80,\"commaStyle\":\"trailing\"}"
 
-[functions.gmail-auth-url]
-enabled = true
-verify_jwt = false
-import_map = "./functions/gmail-auth-url/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/gmail-auth-url/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/gmail-auth-url/*.html" ]
-
-[functions.gmail-callback]
-enabled = true
-verify_jwt = false
-import_map = "./functions/gmail-callback/deno.json"
-# Uncomment to specify a custom file path to the entrypoint.
-# Supported file extensions are: .ts, .js, .mjs, .jsx, .tsx
-entrypoint = "./functions/gmail-callback/index.ts"
-# Specifies static files to be bundled with the function. Supports glob patterns.
-# For example, if you want to serve static HTML pages in your function:
-# static_files = [ "./functions/gmail-callback/*.html" ]
-
 [functions.scan-gmail]
 enabled = true
 verify_jwt = false
