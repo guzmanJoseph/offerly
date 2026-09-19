@@ -20,7 +20,7 @@ export async function recordApplicationActivity({
   email,
 }: RecordActivityOptions): Promise<void> {
   const eventDate =
-    classification.interviewDate || email.date || null;
+    classification.interviewDate || email.receivedAt;
 
   const { error } = await supabase
     .from("application_activities")
@@ -38,7 +38,7 @@ export async function recordApplicationActivity({
         company: classification.company,
         role: classification.role,
         reason: classification.reason,
-        snippet: email.snippet,
+        evidence: classification.evidence,
       },
     });
 

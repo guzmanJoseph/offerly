@@ -6,10 +6,14 @@ export default function GmailImport() {
   const [connection, setConnection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [syncLogs, setSyncLogs] = useState([]);
+  const [reviewEmails, setReviewEmails] = useState([]);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
 
   useEffect(() => {
     fetchConnection();
     fetchSyncLogs();
+    fetchReviewEmails();
     saveGmailConnection();
   }, []);
 
@@ -42,14 +46,31 @@ export default function GmailImport() {
     return new Date(date).toLocaleString();
   }
 
+  async function fetchReviewEmails() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    const { data, error } = await supabase.from("gmail_message_results")
+      .select("account_email,message_id,subject,reason,classification,received_at")
+      .eq("user_id", user.id).eq("outcome", "needs_review")
+      .order("received_at", { ascending: false }).limit(20);
+    if (error) { setSyncMessage("Could not load emails needing review."); return; }
+    setReviewEmails(data || []);
+  }
+
   async function handleTestSync() {
-    const { data, error } = await supabase.functions.invoke("scan-gmail");
-
-    console.log("SYNC DATA:", data);
-    console.log("SYNC ERROR:", error);
-
-    await fetchConnection();
-    await fetchSyncLogs();
+    setSyncing(true);
+    setSyncMessage("");
+    try {
+      const { data, error } = await supabase.functions.invoke("scan-gmail");
+      if (error) throw error;
+      const incomplete = data.results?.some(result => result.incomplete);
+      setSyncMessage(!data.success ? "Some emails could not be processed. Sync again to retry."
+        : incomplete ? "Progress saved. Sync again to continue processing your emails."
+        : "Sync complete. Uncertain updates are listed below for review.");
+      await Promise.all([fetchConnection(), fetchSyncLogs(), fetchReviewEmails()]);
+    } catch {
+      setSyncMessage("Sync failed. Please try again.");
+    } finally { setSyncing(false); }
   }
 
   async function handleConnectGmail() {
@@ -181,8 +202,8 @@ export default function GmailImport() {
     if (!user) return;
 
     const { data, error } = await supabase
-      .from("gmail_sync_logs")
-      .select("*")
+      .from("application_activities")
+      .select("id,event_type,metadata,subject")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
       .limit(5);
@@ -213,6 +234,7 @@ export default function GmailImport() {
     }
 
     setConnection(null);
+    setReviewEmails([]);
   }
 
   if (loading) return <p>Loading Gmail integration...</p>;
@@ -280,8 +302,8 @@ export default function GmailImport() {
                 syncLogs.map((log) => (
                   <div key={log.id} className="gmail-history-item">
                     <div>
-                      <strong>{log.company}</strong>
-                      <p>{log.role}</p>
+                      <strong>{log.metadata?.company || log.subject}</strong>
+                      <p>{log.metadata?.role}</p>
                     </div>
 
                     <div>
@@ -293,6 +315,23 @@ export default function GmailImport() {
             </div>
             </div>
 
+            {syncMessage && <p role="status">{syncMessage}</p>}
+            {reviewEmails.length > 0 && (
+              <section className="gmail-history" aria-label="Emails needing review">
+                <h3>Needs review</h3>
+                <p>These emails did not change an application. Check the email and update the correct job on your Applications page.</p>
+                {reviewEmails.map(email => (
+                  <div className="gmail-history-item" key={`${email.account_email}:${email.message_id}`}>
+                    <div>
+                      <strong>{email.subject || "Untitled email"}</strong>
+                      <p>{email.reason}</p>
+                      {email.classification?.evidence && <blockquote>{email.classification.evidence}</blockquote>}
+                      <a href={`https://mail.google.com/mail/?authuser=${encodeURIComponent(email.account_email)}#all/${encodeURIComponent(email.message_id)}`} target="_blank" rel="noreferrer">Open email</a>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            )}
             <div className="gmail-actions">
               <button className="primary-btn" onClick={handleConnectGmail}>
                 Reconnect Gmail
@@ -305,8 +344,9 @@ export default function GmailImport() {
               <button
                 className="primary-btn"
                 onClick={handleTestSync}
+                disabled={syncing}
               >
-                Test Gmail Sync
+                {syncing ? "Syncing…" : "Sync Gmail"}
               </button>
               
             </div>
