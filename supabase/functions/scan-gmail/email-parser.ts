@@ -87,6 +87,7 @@ function decodeBase64Url(data: string): string {
 
 function stripHtml(html: string): string {
   return String(html || "")
+    .replace(/<blockquote\b[^>]*>[\s\S]*?<\/blockquote>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<br\s*\/?>/gi, "\n")

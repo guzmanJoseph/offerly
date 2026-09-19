@@ -39,12 +39,24 @@ Deno.serve(async (req) => {
       serviceRoleKey
     );
 
-    const { data: connections, error } = await supabase
+    if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+    const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") || "";
+    const cronSecret = Deno.env.get("GMAIL_CRON_SECRET");
+    const isCron = bearer === serviceRoleKey || (!!cronSecret && bearer === cronSecret);
+    let userId: string | null = null;
+    if (!isCron) {
+      const { data, error: authError } = await supabase.auth.getUser(bearer);
+      if (authError || !data.user) return json({ error: "Unauthorized" }, 401);
+      userId = data.user.id;
+    }
+    let connectionsQuery = supabase
       .from("gmail_connections")
       .select(
         "user_id, email, refresh_token, last_synced_at"
       )
       .eq("is_connected", true);
+    if (userId) connectionsQuery = connectionsQuery.eq("user_id", userId);
+    const { data: connections, error } = await connectionsQuery;
 
     if (error) {
       return json(

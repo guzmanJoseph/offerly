@@ -14,10 +14,13 @@ export type ClassificationResult = {
   interviewDate: string;
   reason: string;
   confidence: number;
+  evidence: string;
+  ambiguous: boolean;
 };
 
 export type GmailEmail = {
   messageId: string;
+  receivedAt: string;
   subject: string;
   from: string;
   date: string;
@@ -31,6 +34,9 @@ export type ApplicationRecord = {
   company: string;
   role: string;
   status: string;
+  updated_at: string | null;
+  gmail_event_at: string | null;
+  gmail_status_updated_at: string | null;
 };
 
 export type GmailConnection = {

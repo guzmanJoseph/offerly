@@ -1,275 +1,85 @@
-import type {
-  ApplicationRecord,
-  GmailConnection,
-} from "./types.ts";
-
+import type { ApplicationRecord, GmailConnection } from "./types.ts";
 import { refreshGoogleAccessToken } from "./google-auth.ts";
-import {
-  fetchGmailMessages,
-  searchGmailMessages,
-} from "./gmail.ts";
-import { classifyEmailWithAI } from "./classifier.ts";
-import {
-  findMatchingApplication,
-  updateApplicationStatus,
-} from "./applications.ts";
-import {
-  activityAlreadyExists,
-  recordApplicationActivity,
-} from "./activity.ts";
+import { fetchGmailMessage, searchGmailMessages } from "./gmail.ts";
+import { canAutoUpdate, classifyEmailWithAI, validateClassification } from "./classifier.ts";
+import { findMatchingApplication, statusDecision, updateApplicationStatus } from "./applications.ts";
+import { activityAlreadyExists, recordApplicationActivity } from "./activity.ts";
+import { buildGmailQuery, isRecruitingCandidate } from "./filter.ts";
 
-type SyncAccountResult = {
-  user_id: string;
-  email: string;
-  success: boolean;
-  emails_found: number;
-  emails_processed: number;
-  applications_updated: number;
-  results: Array<Record<string, unknown>>;
-};
-
-export async function syncSingleGmailAccount(
-  supabase: any,
-  connection: GmailConnection
-): Promise<SyncAccountResult> {
-  const accessToken = await refreshGoogleAccessToken(
-    connection.refresh_token
-  );
-
-  const applications = await getApplications(
-    supabase,
-    connection.user_id
-  );
-
-  const query = buildGmailQuery(connection.last_synced_at);
-
-  const messageIds = await searchGmailMessages(
-    accessToken,
-    query,
-    50
-  );
-
-  const emails = await fetchGmailMessages(
-    accessToken,
-    messageIds
-  );
-
-  let emailsProcessed = 0;
-  let applicationsUpdated = 0;
-
+export async function syncSingleGmailAccount(supabase: any, connection: GmailConnection) {
+  const startedAt = Date.now();
+  const { data: applications, error: appError } = await supabase.from("applications")
+    .select("id,user_id,company,role,status,updated_at,gmail_event_at,gmail_status_updated_at").eq("user_id", connection.user_id);
+  if (appError) throw new Error(appError.message);
+  const apps = (applications || []) as ApplicationRecord[];
+  const accessToken = await refreshGoogleAccessToken(connection.refresh_token);
+  const ids = await searchGmailMessages(accessToken, buildGmailQuery(connection.last_synced_at, startedAt));
+  let processed = 0, updated = 0, failures = 0, complete = true;
   const results: Array<Record<string, unknown>> = [];
 
-  for (const email of emails) {
+  // Load records in bounded chunks, avoiding Supabase's default row limit.
+  const records = new Map<string, any>();
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await supabase.from("gmail_message_results").select("message_id,outcome,classification")
+      .eq("user_id", connection.user_id).eq("account_email", connection.email).in("message_id", ids.slice(i, i + 100));
+    if (error) throw new Error(error.message);
+    for (const row of data || []) records.set(row.message_id, row);
+  }
+
+  for (const messageId of ids) {
+    const prior = records.get(messageId);
+    if (prior && prior.outcome !== "pending") continue;
+    // Completed outcomes persist across bounded runs; the checkpoint stays put until all are handled.
+    if (processed >= 75 || Date.now() - startedAt > 45_000) { complete = false; break; }
     try {
-      const alreadyProcessed = await activityAlreadyExists(
-        supabase,
-        connection.user_id,
-        email.messageId
-      );
-
-      if (alreadyProcessed) {
-        results.push({
-          messageId: email.messageId,
-          subject: email.subject,
-          updated: false,
-          reason: "Already processed",
-        });
-
-        continue;
+      const email = await fetchGmailMessage(accessToken, messageId);
+      processed++;
+      const save = async (outcome: string, reason: string, classification: unknown = null) => {
+        const { error } = await supabase.from("gmail_message_results").upsert({
+          user_id: connection.user_id, account_email: connection.email, message_id: messageId,
+          outcome, reason, classification, subject: email.subject, received_at: email.receivedAt,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id,account_email,message_id" });
+        if (error) throw new Error(error.message);
+      };
+      if (await activityAlreadyExists(supabase, connection.user_id, messageId)) {
+        await save("matched", "Activity already recorded"); continue;
       }
-
-      emailsProcessed++;
-
-      const classification = await classifyEmailWithAI(
-        email,
-        applications
-      );
-
-      if (
-        !classification ||
-        classification.eventType === "Unrelated"
-      ) {
-        results.push({
-          messageId: email.messageId,
-          subject: email.subject,
-          updated: false,
-          reason:
-            classification?.reason ||
-            "Email was unrelated",
-        });
-
-        continue;
+      if (!isRecruitingCandidate(email, apps)) {
+        await save("ignored", "No recruiting signals"); continue;
       }
-
-      const matchingApplication =
-        findMatchingApplication(
-          applications,
-          classification,
-          email
-        );
-
-      if (!matchingApplication) {
-        results.push({
-          messageId: email.messageId,
-          subject: email.subject,
-          eventType: classification.eventType,
-          company: classification.company,
-          role: classification.role,
-          updated: false,
-          reason: "No matching application found",
-        });
-
-        continue;
+      const classification = prior?.classification
+        ? validateClassification(prior.classification) : await classifyEmailWithAI(email);
+      if (classification.eventType === "Unrelated") {
+        await save("ignored", classification.reason, classification); continue;
       }
-
-      await updateApplicationStatus(
-        supabase,
-        matchingApplication,
-        classification.eventType
-      );
-
-      await recordApplicationActivity({
-        supabase,
-        userId: connection.user_id,
-        application: matchingApplication,
-        classification,
-        email,
-      });
-
-      matchingApplication.status =
-        classification.eventType;
-
-      applicationsUpdated++;
-
-      results.push({
-        messageId: email.messageId,
-        subject: email.subject,
-        applicationId: matchingApplication.id,
-        company: matchingApplication.company,
-        role: matchingApplication.role,
-        eventType: classification.eventType,
-        confidence: classification.confidence,
-        updated: true,
-      });
+      // Cache before mutation: database retries don't pay for another model call.
+      await save("pending", "Processing", classification);
+      const app = findMatchingApplication(apps, classification, email);
+      let reason = !canAutoUpdate(classification, email) ? "Uncertain event or missing supporting evidence"
+        : !app ? "Company and role do not identify exactly one application" : null;
+      // A retry can resume between updating the application and recording its activity.
+      const resuming = !!prior?.classification && app?.gmail_event_at === email.receivedAt && app?.status === classification.eventType;
+      if (!reason && app && !resuming) reason = statusDecision(app, classification.eventType, email.receivedAt);
+      if (reason || !app) {
+        await save("needs_review", reason || "No unique match", classification);
+        results.push({ messageId, outcome: "needs_review", reason }); continue;
+      }
+      const changed = resuming ? false : await updateApplicationStatus(supabase, app, classification.eventType, email.receivedAt);
+      await recordApplicationActivity({ supabase, userId: connection.user_id, application: app, classification, email });
+      await save("matched", changed ? "Application updated" : "Event recorded", classification);
+      if (changed) updated++;
+      results.push({ messageId, outcome: "matched", applicationId: app.id, updated: changed });
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : String(error);
-
-      console.error("EMAIL_PROCESSING_FAILED", {
-        messageId: email.messageId,
-        subject: email.subject,
-        error: message,
-      });
-
-      results.push({
-        messageId: email.messageId,
-        subject: email.subject,
-        updated: false,
-        reason: message,
-      });
+      failures++;
+      results.push({ messageId, outcome: "failed", reason: error instanceof Error ? error.message : String(error) });
     }
   }
-
-  await updateConnectionStats(
-    supabase,
-    connection,
-    emailsProcessed,
-    applicationsUpdated
-  );
-
-  return {
-    user_id: connection.user_id,
-    email: connection.email,
-    success: true,
-    emails_found: messageIds.length,
-    emails_processed: emailsProcessed,
-    applications_updated: applicationsUpdated,
-    results,
-  };
-}
-
-async function getApplications(
-  supabase: any,
-  userId: string
-): Promise<ApplicationRecord[]> {
-  const { data, error } = await supabase
-    .from("applications")
-    .select("id, user_id, company, role, status")
-    .eq("user_id", userId);
-
-  if (error) {
-    throw new Error(
-      `Could not load applications: ${error.message}`
-    );
-  }
-
-  return data || [];
-}
-
-function buildGmailQuery(
-  lastSyncedAt?: string | null
-): string {
-  const recruitingTerms = [
-    "interview",
-    "assessment",
-    "coding challenge",
-    "hackerrank",
-    "codesignal",
-    "hirevue",
-    "offer",
-    "offer letter",
-    "moving forward",
-    "not selected",
-    "application update",
-  ];
-
-  const termQuery = recruitingTerms
-    .map((term) => `"${term}"`)
-    .join(" OR ");
-
-  if (!lastSyncedAt) {
-    return `newer_than:30d (${termQuery})`;
-  }
-
-  const parsedDate = new Date(lastSyncedAt);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    return `newer_than:30d (${termQuery})`;
-  }
-
-  const afterDate = [
-    parsedDate.getUTCFullYear(),
-    String(parsedDate.getUTCMonth() + 1).padStart(2, "0"),
-    String(parsedDate.getUTCDate()).padStart(2, "0"),
-  ].join("/");
-
-  return `after:${afterDate} (${termQuery})`;
-}
-
-async function updateConnectionStats(
-  supabase: any,
-  connection: GmailConnection,
-  emailsProcessed: number,
-  applicationsUpdated: number
-): Promise<void> {
-  const { error } = await supabase
-    .from("gmail_connections")
-    .update({
-      last_synced_at: new Date().toISOString(),
-      emails_processed: emailsProcessed,
-      applications_updated: applicationsUpdated,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", connection.user_id)
-    .eq("email", connection.email);
-
-  if (error) {
-    console.error("CONNECTION_STATS_UPDATE_FAILED", {
-      userId: connection.user_id,
-      email: connection.email,
-      error: error.message,
-    });
-  }
+  const { error } = await supabase.from("gmail_connections").update({
+    ...(complete && failures === 0 ? { last_synced_at: new Date(startedAt).toISOString() } : {}),
+    emails_processed: processed, applications_updated: updated, updated_at: new Date().toISOString(),
+  }).eq("user_id", connection.user_id).eq("email", connection.email);
+  if (error) throw new Error(error.message);
+  return { user_id: connection.user_id, email: connection.email, success: failures === 0,
+    incomplete: !complete, emails_found: ids.length, emails_processed: processed, applications_updated: updated, results };
 }

@@ -1,196 +1,40 @@
-import type {
-  ApplicationRecord,
-  ClassificationResult,
-  GmailEmail,
-} from "./types.ts";
+import type { ApplicationRecord, ClassificationResult, GmailEmail } from "./types.ts";
+import { containsPhrase, currentMessage, normalize } from "./filter.ts";
 
-export function findMatchingApplication(
-  applications: ApplicationRecord[],
-  classification: ClassificationResult,
-  email: GmailEmail
-): ApplicationRecord | null {
-  if (!applications.length) return null;
-
-  const rankedApplications = applications
-    .map((application) => ({
-      application,
-      score: calculateMatchScore(
-        application,
-        classification,
-        email
-      ),
-    }))
-    .sort((a, b) => b.score - a.score);
-
-  const bestMatch = rankedApplications[0];
-
-  if (!bestMatch || bestMatch.score < 40) {
-    return null;
-  }
-
-  return bestMatch.application;
+function companyName(value: string): string {
+  return normalize(value).replace(/\b(inc|llc|corp|corporation|company|co)\b/g, "").replace(/\s+/g, " ").trim();
+}
+export function findMatchingApplication(apps: ApplicationRecord[], result: ClassificationResult, email: GmailEmail): ApplicationRecord | null {
+  const company = companyName(result.company);
+  const role = normalize(result.role);
+  const text = `${email.subject} ${email.from} ${currentMessage(email.body)}`;
+  // No substring scoring: "Meta" must not match "Metaverse", nor "Engineer" match every engineering role.
+  if (!company || !role || !containsPhrase(text, result.company) || !containsPhrase(text, result.role)) return null;
+  const matches = apps.filter(app => companyName(app.company) === company && normalize(app.role) === role);
+  return matches.length === 1 ? matches[0] : null;
 }
 
-export async function updateApplicationStatus(
-  supabase: any,
-  application: ApplicationRecord,
-  eventType: ClassificationResult["eventType"]
-): Promise<void> {
-  if (
-    eventType === "Unrelated" ||
-    eventType === "Applied" ||
-    eventType === "Withdrawn"
-  ) {
-    return;
-  }
-
-  const statusRank: Record<string, number> = {
-    Applied: 1,
-    Assessment: 2,
-    Interview: 3,
-    Rejected: 4,
-    Offer: 5,
-  };
-
-  const currentRank =
-    statusRank[application.status] || 0;
-
-  const newRank = statusRank[eventType] || 0;
-
-  if (newRank < currentRank) {
-    console.log("Skipping status downgrade", {
-      applicationId: application.id,
-      currentStatus: application.status,
-      proposedStatus: eventType,
-    });
-
-    return;
-  }
-
-  const { error } = await supabase
-    .from("applications")
-    .update({
-      status: eventType,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", application.id)
-    .eq("user_id", application.user_id);
-
-  if (error) {
-    throw new Error(
-      `Could not update application: ${error.message}`
-    );
-  }
+export function statusDecision(app: ApplicationRecord, event: ClassificationResult["eventType"], receivedAt: string): string | null {
+  const time = Date.parse(receivedAt);
+  if (!Number.isFinite(time)) return "Missing reliable email timestamp";
+  if (app.gmail_event_at && time <= Date.parse(app.gmail_event_at)) return "Older or already applied email";
+  // Preserve manual edits made after the last automatic update.
+  if (app.updated_at && app.updated_at !== app.gmail_status_updated_at && time < Date.parse(app.updated_at)) return "Application was updated after this email";
+  if (["Rejected", "Offer", "Withdrawn"].includes(app.status) && app.status !== event) return "Terminal status requires review";
+  const ranks: Record<string, number> = { Applied: 1, Assessment: 2, Interview: 3, Offer: 4, Rejected: 4 };
+  if (!ranks[event] || (ranks[event] < (ranks[app.status] || 0))) return "Status change requires review";
+  return null;
 }
 
-function calculateMatchScore(
-  application: ApplicationRecord,
-  classification: ClassificationResult,
-  email: GmailEmail
-): number {
-  const emailText = normalizeText(
-    `${email.subject} ${email.from} ${email.snippet} ${email.body}`
-  );
-
-  const applicationCompany = normalizeText(
-    application.company
-  );
-
-  const applicationRole = normalizeText(
-    application.role
-  );
-
-  const classifiedCompany = normalizeText(
-    classification.company
-  );
-
-  const classifiedRole = normalizeText(
-    classification.role
-  );
-
-  let score = 0;
-
-  if (
-    classifiedCompany &&
-    companiesMatch(
-      applicationCompany,
-      classifiedCompany
-    )
-  ) {
-    score += 70;
-  }
-
-  if (
-    applicationCompany &&
-    emailText.includes(applicationCompany)
-  ) {
-    score += 55;
-  }
-
-  if (
-    classifiedRole &&
-    rolesMatch(applicationRole, classifiedRole)
-  ) {
-    score += 35;
-  }
-
-  score += countMatchingRoleWords(
-    applicationRole,
-    emailText
-  ) * 5;
-
-  return score;
-}
-
-function companiesMatch(
-  firstCompany: string,
-  secondCompany: string
-): boolean {
-  if (!firstCompany || !secondCompany) {
-    return false;
-  }
-
-  return (
-    firstCompany.includes(secondCompany) ||
-    secondCompany.includes(firstCompany)
-  );
-}
-
-function rolesMatch(
-  firstRole: string,
-  secondRole: string
-): boolean {
-  if (!firstRole || !secondRole) {
-    return false;
-  }
-
-  return (
-    firstRole.includes(secondRole) ||
-    secondRole.includes(firstRole)
-  );
-}
-
-function countMatchingRoleWords(
-  role: string,
-  emailText: string
-): number {
-  const importantWords = role
-    .split(" ")
-    .filter((word) => word.length >= 4);
-
-  return importantWords.filter((word) =>
-    emailText.includes(word)
-  ).length;
-}
-
-function normalizeText(value: string): string {
-  return String(value || "")
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .replace(
-      /\b(inc|llc|corp|corporation|company|co)\b/g,
-      ""
-    )
-    .replace(/\s+/g, " ")
-    .trim();
+export async function updateApplicationStatus(supabase: any, app: ApplicationRecord, event: ClassificationResult["eventType"], receivedAt: string): Promise<boolean> {
+  const now = new Date().toISOString();
+  let query = supabase.from("applications").update({ status: event, updated_at: now, gmail_event_at: receivedAt, gmail_status_updated_at: now })
+    .eq("id", app.id).eq("user_id", app.user_id).eq("status", app.status);
+  query = app.updated_at ? query.eq("updated_at", app.updated_at) : query.is("updated_at", null);
+  const { data, error } = await query.select("id");
+  if (error) throw new Error(`Could not update application: ${error.message}`);
+  if (!data?.length) throw new Error("Application changed during sync; retry required");
+  const changed = app.status !== event;
+  app.status = event; app.updated_at = now; app.gmail_event_at = receivedAt; app.gmail_status_updated_at = now;
+  return changed;
 }
