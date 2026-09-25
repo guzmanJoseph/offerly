@@ -76,6 +76,7 @@ export default function ApplicationModal({ application,onClose, onSave }) {
 
         <select name="status" value={formData.status} onChange={handleChange}>
           <option>Applied</option>
+          <option>Assessment</option>
           <option>Interview</option>
           <option>Offer</option>
           <option>Rejected</option>

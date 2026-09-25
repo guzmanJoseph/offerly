@@ -346,3 +346,18 @@ font-size:26px;
 
     box-shadow: 0 10px 25px rgba(37, 99, 235, 0.25);
 }
+
+.forgot-password-link {
+  display: block;
+  margin: 0 0 12px auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #a9baff;
+  cursor: pointer;
+  font: inherit;
+}
+
+.forgot-password-link:hover {
+  text-decoration: underline;
+}

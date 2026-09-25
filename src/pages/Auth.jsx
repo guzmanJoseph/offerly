@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
-import { Link } from "react-router-dom";
 import "../styles/auth.css";
 
 export default function Auth() {
@@ -25,8 +24,25 @@ export default function Auth() {
 
     if (isLogin) {
       navigate("/dashboard");
+    }
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      alert("Enter your email address first.");
       return;
     }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    alert("Password reset email sent. Check your inbox.");
   }
 
   async function signInWithGoogle() {
@@ -55,10 +71,10 @@ export default function Auth() {
 
   return (
     <div className="auth-page">
-
       <Link to="/" className="back-to-home">
         ← Back to Home
       </Link>
+
       <form className="auth-card" onSubmit={handleSubmit}>
         <h1 className="auth-logo">Offerly</h1>
 
@@ -75,7 +91,7 @@ export default function Auth() {
           type="email"
           placeholder="Email"
           value={email}
-          onChange={e => setEmail(e.target.value)}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
 
@@ -84,9 +100,19 @@ export default function Auth() {
           type="password"
           placeholder="Password"
           value={password}
-          onChange={e => setPassword(e.target.value)}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
+
+        {isLogin && (
+          <button
+            type="button"
+            className="forgot-password-link"
+            onClick={handleForgotPassword}
+          >
+            Forgot password?
+          </button>
+        )}
 
         <button className="auth-button" type="submit">
           {isLogin ? "Log In" : "Create Account"}
@@ -100,7 +126,10 @@ export default function Auth() {
           Connect your Google account to sync Gmail and Calendar.
         </button>
 
-        <p className="auth-switch" onClick={() => setIsLogin(!isLogin)}>
+        <p
+          className="auth-switch"
+          onClick={() => setIsLogin(!isLogin)}
+        >
           {isLogin
             ? "Need an account? Sign Up"
             : "Already have an account? Log In"}

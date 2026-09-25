@@ -16,6 +16,7 @@ export default function Home() {
         <div className="home-nav-links">
           <a href="#features">Features</a>
           <a href="#extension">Extension</a>
+          <a href="#tutorial">Tutorial</a>
           <Link to="/privacy">Privacy</Link>
         </div>
 
@@ -30,9 +31,7 @@ export default function Home() {
             ✨ Job Search Management Platform
           </span>
 
-          <h1>
-            Turn job hunting chaos into a clean, organized system.
-          </h1>
+          <h1>Turn job hunting chaos into a clean, organized system.</h1>
 
           <p>
             Track applications, import Gmail updates, save jobs with the
@@ -77,6 +76,27 @@ export default function Home() {
             src="/offerly.png"
             alt="Offerly Dashboard Preview"
             className="dashboard-preview"
+          />
+        </div>
+      </section>
+
+      <section id="tutorial" className="home-tutorial">
+        <div className="section-heading">
+          <span>Quick walkthrough</span>
+          <h2>See how Offerly works.</h2>
+          <p>
+            Watch a short tour of the tools that keep your job search
+            organized.
+          </p>
+        </div>
+
+        <div className="tutorial-video">
+          <iframe
+            src="https://www.youtube-nocookie.com/embed/7RCoGj-yLs0"
+            title="How to use Offerly"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            referrerPolicy="strict-origin-when-cross-origin"
+            allowFullScreen
           />
         </div>
       </section>
@@ -160,7 +180,10 @@ export default function Home() {
 
       <section className="home-cta">
         <h2>Ready to make your job search feel easier?</h2>
-        <p>Start organizing applications, interviews, emails, and contacts today.</p>
+        <p>
+          Start organizing applications, interviews, emails, and contacts
+          today.
+        </p>
 
         <Link to="/auth" className="home-primary-btn">
           Create Free Account

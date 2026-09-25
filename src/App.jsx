@@ -14,6 +14,7 @@ import Settings from "./pages/Settings";
 import ImportGmail from "./pages/ImportGmail";
 import Privacy from "./pages/Privacy";
 import Home from "./pages/Home";
+import ResetPassword from "./pages/ResetPassword";
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -30,7 +31,7 @@ export default function App() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
 
@@ -43,11 +44,11 @@ export default function App() {
 
   return (
     <Routes>
-
       {/* Public Pages */}
       <Route path="/" element={<Home />} />
       <Route path="/auth" element={<Auth />} />
       <Route path="/privacy" element={<Privacy />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
 
       {/* Protected Pages */}
       {session ? (
@@ -72,7 +73,6 @@ export default function App() {
       ) : (
         <Route path="/*" element={<Navigate to="/" replace />} />
       )}
-
     </Routes>
   );
 }
