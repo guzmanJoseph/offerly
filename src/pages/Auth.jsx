@@ -15,19 +15,41 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
 
-    const result = isLogin
-      ? await supabase.auth.signInWithPassword({ email, password })
-      : await supabase.auth.signUp({ email, password });
+    try {
+      if (isLogin) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-    setLoading(false);
+        if (error) {
+          alert(error.message);
+          return;
+        }
 
-    if (result.error) {
-      alert(result.error.message);
-      return;
-    }
+        navigate("/dashboard", { replace: true });
+      } else {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+        });
 
-    if (isLogin) {
-      navigate("/dashboard");
+        if (error) {
+          alert(error.message);
+          return;
+        }
+
+        alert(
+          "Account created! Check your email if email confirmation is required."
+        );
+
+        setIsLogin(true);
+      }
+    } catch (error) {
+      console.error("Authentication error:", error);
+      alert("Something went wrong. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -37,32 +59,43 @@ export default function Auth() {
       return;
     }
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
 
-    if (error) {
-      alert(error.message);
-      return;
+      if (error) {
+        alert(error.message);
+        return;
+      }
+
+      alert("Password reset instructions have been sent to your email.");
+    } catch (error) {
+      console.error("Password reset error:", error);
+      alert("Something went wrong. Please try again.");
     }
-
-    alert("Password reset instructions have been sent to your email.");
   }
 
   async function signInWithGoogle() {
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        scopes: "openid email profile",
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
-    });
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          scopes: "openid email profile",
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
 
-    if (error) {
+      if (error) {
+        alert(error.message);
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Google sign-in error:", error);
+      alert("Something went wrong with Google sign-in.");
       setLoading(false);
-      alert(error.message);
     }
   }
 
@@ -89,6 +122,7 @@ export default function Auth() {
           placeholder="Email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
+          autoComplete="email"
           required
         />
 
@@ -98,19 +132,21 @@ export default function Auth() {
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
+          autoComplete={isLogin ? "current-password" : "new-password"}
           required
         />
 
         {isLogin && (
-          <p
-            className="auth-switch"
-            onClick={handleForgotPassword}
-          >
+          <p className="auth-switch" onClick={handleForgotPassword}>
             Forgot password?
           </p>
         )}
 
-        <button className="auth-button" type="submit" disabled={loading}>
+        <button
+          className="auth-button"
+          type="submit"
+          disabled={loading}
+        >
           {loading
             ? "Please wait..."
             : isLogin
@@ -127,7 +163,10 @@ export default function Auth() {
           Continue with Google
         </button>
 
-        <p className="auth-switch" onClick={() => setIsLogin(!isLogin)}>
+        <p
+          className="auth-switch"
+          onClick={() => setIsLogin((current) => !current)}
+        >
           {isLogin
             ? "Need an account? Sign Up"
             : "Already have an account? Log In"}
