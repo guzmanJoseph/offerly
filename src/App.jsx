@@ -16,26 +16,54 @@ import Privacy from "./pages/Privacy";
 import Home from "./pages/Home";
 import ResetPassword from "./pages/ResetPassword";
 
+function ProtectedRoute({ session, children }) {
+  if (!session) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return children;
+}
+
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    async function getSession() {
-      const { data } = await supabase.auth.getSession();
-      setSession(data.session);
-      setLoading(false);
+    let mounted = true;
+
+    async function initializeAuth() {
+      const {
+        data: { session },
+        error,
+      } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error("Error getting session:", error);
+      }
+
+      if (mounted) {
+        setSession(session);
+        setLoading(false);
+      }
     }
 
-    getSession();
+    initializeAuth();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
+    } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log("Auth event:", event);
+
+      if (mounted) {
+        setSession(newSession);
+        setLoading(false);
+      }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
@@ -44,35 +72,105 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Public Pages */}
-      <Route path="/" element={<Home />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/privacy" element={<Privacy />} />
-      <Route path="/reset-password" element={<ResetPassword />} />
+      {/* Public routes */}
+      <Route
+        path="/"
+        element={
+          session ? <Navigate to="/dashboard" replace /> : <Home />
+        }
+      />
 
-      {/* Protected Pages */}
-      {session ? (
-        <Route
-          path="/*"
-          element={
+      <Route
+        path="/auth"
+        element={
+          session ? <Navigate to="/dashboard" replace /> : <Auth />
+        }
+      />
+
+      <Route path="/privacy" element={<Privacy />} />
+
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
+      />
+
+      {/* Protected routes */}
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute session={session}>
             <Layout>
-              <Routes>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/applications" element={<Applications />} />
-                <Route path="/gmail-import" element={<ImportGmail />} />
-                <Route path="/calendar" element={<CalendarPage />} />
-                <Route path="/networking" element={<Networking />} />
-                <Route
-                  path="/settings"
-                  element={<Settings user={session.user} />}
-                />
-              </Routes>
+              <Dashboard />
             </Layout>
-          }
-        />
-      ) : (
-        <Route path="/*" element={<Navigate to="/" replace />} />
-      )}
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/applications"
+        element={
+          <ProtectedRoute session={session}>
+            <Layout>
+              <Applications />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/gmail-import"
+        element={
+          <ProtectedRoute session={session}>
+            <Layout>
+              <ImportGmail />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/calendar"
+        element={
+          <ProtectedRoute session={session}>
+            <Layout>
+              <CalendarPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/networking"
+        element={
+          <ProtectedRoute session={session}>
+            <Layout>
+              <Networking />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/settings"
+        element={
+          <ProtectedRoute session={session}>
+            <Layout>
+              <Settings user={session?.user} />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      {/* Catch-all */}
+      <Route
+        path="*"
+        element={
+          <Navigate
+            to={session ? "/dashboard" : "/"}
+            replace
+          />
+        }
+      />
     </Routes>
   );
 }

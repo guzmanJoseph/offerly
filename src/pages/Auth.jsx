@@ -79,22 +79,17 @@ export default function Auth() {
   async function signInWithGoogle() {
     setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          scopes: "openid email profile",
-          redirectTo: `${window.location.origin}/`,
-        },
-      });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        scopes: "openid email profile",
+        redirectTo: window.location.origin,
+      },
+    });
 
-      if (error) {
-        alert(error.message);
-        setLoading(false);
-      }
-    } catch (error) {
-      console.error("Google sign-in error:", error);
-      alert("Something went wrong with Google sign-in.");
+    if (error) {
+      console.error("Google login error:", error);
+      alert(error.message);
       setLoading(false);
     }
   }
