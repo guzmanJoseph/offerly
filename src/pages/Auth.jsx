@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "../lib/supabaseClient";
 import "../styles/auth.css";
 
@@ -9,13 +9,17 @@ export default function Auth() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
+    setLoading(true);
 
     const result = isLogin
       ? await supabase.auth.signInWithPassword({ email, password })
       : await supabase.auth.signUp({ email, password });
+
+    setLoading(false);
 
     if (result.error) {
       alert(result.error.message);
@@ -28,7 +32,7 @@ export default function Auth() {
   }
 
   async function handleForgotPassword() {
-    if (!email.trim()) {
+    if (!email) {
       alert("Enter your email address first.");
       return;
     }
@@ -42,10 +46,12 @@ export default function Auth() {
       return;
     }
 
-    alert("Password reset email sent. Check your inbox.");
+    alert("Password reset instructions have been sent to your email.");
   }
 
   async function signInWithGoogle() {
+    setLoading(true);
+
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -54,7 +60,10 @@ export default function Auth() {
       },
     });
 
-    if (error) alert(error.message);
+    if (error) {
+      setLoading(false);
+      alert(error.message);
+    }
   }
 
   return (
@@ -93,31 +102,32 @@ export default function Auth() {
         />
 
         {isLogin && (
-          <button
-            type="button"
-            className="forgot-password-link"
+          <p
+            className="auth-switch"
             onClick={handleForgotPassword}
           >
             Forgot password?
-          </button>
+          </p>
         )}
 
-        <button className="auth-button" type="submit">
-          {isLogin ? "Log In" : "Create Account"}
+        <button className="auth-button" type="submit" disabled={loading}>
+          {loading
+            ? "Please wait..."
+            : isLogin
+              ? "Log In"
+              : "Create Account"}
         </button>
 
         <button
           type="button"
           className="auth-google-button"
           onClick={signInWithGoogle}
+          disabled={loading}
         >
-          Connect your Google account to sync Gmail and Calendar.
+          Continue with Google
         </button>
 
-        <p
-          className="auth-switch"
-          onClick={() => setIsLogin(!isLogin)}
-        >
+        <p className="auth-switch" onClick={() => setIsLogin(!isLogin)}>
           {isLogin
             ? "Need an account? Sign Up"
             : "Already have an account? Log In"}
