@@ -147,7 +147,7 @@ GitHub:
 https://github.com/guzmanJoseph
 
 LinkedIn:
-https://www.linkedin.com/in/joseph-guzman-069972246/
+https://www.linkedin.com/in/joseph-guzman-cs/
 
 Portfolio:
-https://joseph-guzman-portfolio.vercel.app/
+https://josephguzman.xyz/
