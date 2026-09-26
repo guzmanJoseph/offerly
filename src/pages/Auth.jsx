@@ -49,24 +49,12 @@ export default function Auth() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        scopes: [
-          "openid",
-          "email",
-          "profile",
-          "https://www.googleapis.com/auth/gmail.readonly",
-          "https://www.googleapis.com/auth/calendar.events",
-        ].join(" "),
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
-        },
+        scopes: "openid email profile",
         redirectTo: `${window.location.origin}/dashboard`,
       },
     });
 
-    if (error) {
-      alert(error.message);
-    }
+    if (error) alert(error.message);
   }
 
   return (
