@@ -44,10 +44,12 @@ export default function GmailImport() {
   const [syncMessage, setSyncMessage] = useState(null);
 
   useEffect(() => {
-    fetchConnection();
     fetchSyncLogs();
     fetchReviewEmails();
-    saveGmailConnection();
+
+    saveGmailConnection()
+      .catch((error) => console.error("Could not save Gmail connection:", error))
+      .finally(() => fetchConnection());
   }, []);
 
   async function fetchConnection() {
