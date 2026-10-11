@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { FiPlus, FiSearch, FiUsers } from "react-icons/fi";
 
 import { supabase } from "../lib/supabaseClient";
@@ -34,29 +34,29 @@ export default function Networking() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
 
-  async function fetchContacts() {
+  const fetchContacts = useCallback(async () => {
     setLoading(true);
     setLoadError("");
 
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("*")
-      .order("created_at", { ascending: false });
+    try {
+      const { data, error } = await supabase
+        .from("contacts")
+        .select("*")
+        .order("created_at", { ascending: false });
 
-    if (error) {
-      console.error(error.message);
+      if (error) throw error;
+      setContacts(data || []);
+    } catch (error) {
+      console.error(error);
       setLoadError("We couldn’t load your contacts. Please try again.");
+    } finally {
       setLoading(false);
-      return;
     }
-
-    setContacts(data || []);
-    setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
     fetchContacts();
-  }, []);
+  }, [fetchContacts]);
 
   async function handleSaveContact(contact) {
     const {
