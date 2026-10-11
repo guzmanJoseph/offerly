@@ -176,7 +176,7 @@ export default function GmailImport() {
       console.error("Gmail sync failed:", error);
       setSyncMessage({
         title: "Sync could not finish",
-        description: "Your application records were not changed by this failed run. Please try again.",
+        description: "Offerly couldn't confirm the result. Check Latest application updates and Needs your review, then try again.",
         type: "error",
       });
     } finally {
@@ -438,7 +438,7 @@ export default function GmailImport() {
             <span className="gmail-change-mark" aria-hidden="true"><FiShield /></span>
             <div>
               <h3>Will not change</h3>
-              <p>Company, role, notes, or your email. Gmail is read-only: Offerly won’t send, move, or delete messages.</p>
+              <p>Company, role, notes, or email content. Gmail is read-only: Offerly won’t send, move, or delete messages.</p>
             </div>
           </article>
         </div>
@@ -458,7 +458,7 @@ export default function GmailImport() {
                   <h2 id="gmail-review-title">Needs your review</h2>
                   <span className="gmail-count-pill">{reviewEmails.length}</span>
                 </div>
-                <p>These messages did not change an application. Review the suggestion, then update the right application yourself if needed.</p>
+                <p>These messages did not change an application. Review the suggestion, then update the right application yourself if needed. Showing up to 20 recent emails.</p>
               </div>
             </div>
 
