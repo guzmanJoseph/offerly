@@ -12,6 +12,10 @@
     --secondary-text: #94A3B8;
 
     --blue: #2563EB;
+    --brand-blue: #3B82F6;
+    --brand-teal: #14B8A6;
+    --brand-cyan: #22D3EE;
+    --brand-gradient: linear-gradient(135deg, var(--brand-blue), var(--brand-teal));
 
     --green: #16A34A;
 
