@@ -1,4 +1,5 @@
 import { FiEdit2 } from "react-icons/fi";
+import StatusBadge from "../applications/StatusBadge";
 import "../styles/networking.css";
 
 export default function ContactTable({ contacts, onEdit }) {
@@ -25,9 +26,7 @@ export default function ContactTable({ contacts, onEdit }) {
               <td data-label="Role">{contact.role}</td>
               <td data-label="Relationship">{contact.relationship_type}</td>
               <td data-label="Status">
-                <span className="contact-status">
-                  {contact.status}
-                </span>
+                <StatusBadge status={contact.status} />
               </td>
               <td data-label="Next Follow-Up">{contact.next_follow_up || "—"}</td>
 

@@ -1,0 +1,482 @@
+/* ==========================================================
+   OFFERLY  //  GLASS + GLOW THEME
+   Loaded after motion.css. References: neon glass status pills,
+   plum/mauve glass dashboard, blue-hour skyline with warm screen glow.
+
+   - Deep plum-black base, mauve and cyan light leaks
+   - Glass panels: translucent fill, hairline border, inner highlight
+   - Glow pills: gradient border + tinted fill for every status
+   - Spotlight that follows the cursor over cards
+   - Aurora + scan shimmer, count-in numbers, smooth motion
+   ========================================================== */
+
+:root {
+    --bg-0: #07050b;
+    --bg-1: #0d0912;
+    --glass: rgba(255, 255, 255, 0.045);
+    --glass-strong: rgba(255, 255, 255, 0.075);
+    --glass-border: rgba(255, 255, 255, 0.11);
+    --glass-hi: rgba(255, 255, 255, 0.16);
+
+    --mauve: #c9a0dc;
+    --mauve-deep: #8b5a9f;
+    --plum: #2a1633;
+    --cyan: #5eead4;
+    --sky: #7cc4ff;
+
+    --text: #f4eefa;
+    --secondary-text: #a79bb5;
+
+    --card: rgba(255, 255, 255, 0.045);
+    --border: rgba(255, 255, 255, 0.11);
+    --background: #07050b;
+    --sidebar: rgba(10, 7, 15, 0.7);
+
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------- BASE ---------- */
+
+html, body {
+    background: var(--bg-0) !important;
+    color: var(--text);
+}
+
+body {
+    font-family: "Inter", -apple-system, sans-serif;
+}
+
+/* aurora: mauve + cyan light leaks, slow drift */
+body::before {
+    background:
+        radial-gradient(42% 50% at 8% 6%, rgba(139, 90, 159, 0.34), transparent 70%),
+        radial-gradient(36% 42% at 92% 10%, rgba(94, 234, 212, 0.14), transparent 70%),
+        radial-gradient(46% 50% at 88% 92%, rgba(201, 160, 220, 0.2), transparent 70%),
+        radial-gradient(34% 40% at 6% 88%, rgba(124, 196, 255, 0.12), transparent 70%),
+        linear-gradient(180deg, var(--bg-1), var(--bg-0)) !important;
+}
+
+body::after {
+    background-image:
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px) !important;
+    background-size: 56px 56px !important;
+}
+
+/* ---------- SIDEBAR: floating glass rail ---------- */
+
+.sidebar {
+    background: linear-gradient(180deg, rgba(20, 13, 28, 0.78), rgba(8, 5, 12, 0.82)) !important;
+    border-right: 1px solid var(--glass-border) !important;
+    backdrop-filter: blur(26px) saturate(1.5);
+    -webkit-backdrop-filter: blur(26px) saturate(1.5);
+}
+
+.sidebar-nav a {
+    border-radius: 14px !important;
+    color: var(--secondary-text) !important;
+}
+
+.sidebar-nav a:hover {
+    background: var(--glass) !important;
+    color: var(--text) !important;
+}
+
+.sidebar-nav a.active {
+    background:
+        linear-gradient(90deg, rgba(201, 160, 220, 0.26), rgba(139, 90, 159, 0.08) 70%, transparent) !important;
+    border-color: rgba(201, 160, 220, 0.3) !important;
+    color: #fff !important;
+    box-shadow: inset 0 1px 0 var(--glass-hi), 0 8px 30px rgba(139, 90, 159, 0.2);
+}
+
+.sidebar-nav a::before {
+    background: linear-gradient(180deg, var(--mauve), var(--cyan)) !important;
+    box-shadow: 0 0 12px rgba(201, 160, 220, 0.9) !important;
+}
+
+.logo {
+    background: linear-gradient(100deg, #fff, var(--mauve));
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.logout-btn {
+    background: var(--glass) !important;
+    border: 1px solid var(--glass-border) !important;
+    color: #f0a6bd !important;
+}
+
+.mobile-topbar {
+    background: rgba(10, 7, 15, 0.75) !important;
+    border-bottom: 1px solid var(--glass-border) !important;
+}
+
+/* ---------- GLASS PANELS ---------- */
+
+.page-header,
+.dashboard-section,
+.stat-card,
+.chart-card,
+.insight-card,
+.table-card,
+.network-pipeline,
+.settings-card,
+.calendar-card,
+.contact-modal,
+.application-modal,
+.event-modal {
+    background:
+        linear-gradient(155deg, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.02) 55%),
+        rgba(14, 9, 20, 0.62) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 24px !important;
+    box-shadow:
+        inset 0 1px 0 var(--glass-hi),
+        inset 0 0 40px rgba(201, 160, 220, 0.03),
+        0 24px 60px rgba(0, 0, 0, 0.45) !important;
+    backdrop-filter: blur(22px) saturate(1.4);
+    -webkit-backdrop-filter: blur(22px) saturate(1.4);
+}
+
+/* hero header: mauve bloom like the Helios total-holding card */
+.page-header {
+    background:
+        radial-gradient(60% 120% at 100% 0%, rgba(201, 160, 220, 0.3), transparent 62%),
+        radial-gradient(40% 90% at 0% 100%, rgba(94, 234, 212, 0.1), transparent 70%),
+        linear-gradient(155deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.015)),
+        rgba(14, 9, 20, 0.7) !important;
+}
+
+.page-header::before {
+    background: rgba(201, 160, 220, 0.22) !important;
+}
+
+.page-header h1 {
+    background: linear-gradient(100deg, #fff 10%, var(--mauve) 55%, var(--cyan) 100%) !important;
+    background-size: 200% 100% !important;
+    -webkit-background-clip: text !important;
+    background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+}
+
+.page-header p { color: var(--secondary-text) !important; }
+
+/* ---------- CURSOR SPOTLIGHT (driven by glass.js) ---------- */
+
+.spot {
+    --mx: 50%;
+    --my: 50%;
+    position: relative;
+}
+
+.spot::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background:
+        radial-gradient(260px circle at var(--mx) var(--my), rgba(201, 160, 220, 0.2), transparent 65%);
+    z-index: 0;
+}
+
+.spot:hover::after { opacity: 1; }
+
+/* gradient hairline border that tracks the cursor */
+.spot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+    background: radial-gradient(180px circle at var(--mx) var(--my), rgba(255, 255, 255, 0.75), transparent 70%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+}
+
+.spot:hover::before { opacity: 1; }
+
+.spot > * { position: relative; z-index: 1; }
+
+.stat-card:hover,
+.table-card:hover,
+.chart-card:hover,
+.dashboard-section:hover {
+    transform: translateY(-4px);
+    box-shadow:
+        inset 0 1px 0 var(--glass-hi),
+        0 30px 70px rgba(0, 0, 0, 0.55),
+        0 0 50px rgba(139, 90, 159, 0.22) !important;
+}
+
+.stat-card h2,
+.stat-value {
+    background: linear-gradient(180deg, #fff, #d9c3e6);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -0.02em;
+}
+
+.stat-card h3,
+.stat-card p {
+    color: var(--secondary-text) !important;
+}
+
+/* ==========================================================
+   GLOW PILLS  (the status system)
+   gradient border + tinted translucent fill + soft outer glow
+   ========================================================== */
+
+.glow-pill,
+.status-badge.glow-pill {
+    --c: 148, 163, 184;        /* tone rgb, overridden below */
+    --c-text: #e2e8f0;
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+
+    padding: 6px 13px 6px 10px;
+    border-radius: 999px;
+
+    color: var(--c-text);
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    text-transform: capitalize;
+
+    background:
+        linear-gradient(135deg, rgba(var(--c), 0.06), rgba(var(--c), 0.34)),
+        rgba(8, 5, 12, 0.55);
+    border: 1px solid rgba(var(--c), 0.55);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 0 14px rgba(var(--c), 0.16),
+        0 0 18px rgba(var(--c), 0.22);
+
+    animation: none !important;
+    transition: box-shadow 0.25s ease, transform 0.25s var(--spring);
+}
+
+/* beat the legacy .status-badge.applied / [data-status] rules */
+.status-badge.glow-pill,
+.status-badge.glow-pill[data-status] {
+    background:
+        linear-gradient(135deg, rgba(var(--c), 0.06), rgba(var(--c), 0.34)),
+        rgba(8, 5, 12, 0.55) !important;
+    border: 1px solid rgba(var(--c), 0.55) !important;
+    color: var(--c-text) !important;
+}
+
+.glow-pill:hover {
+    transform: translateY(-1px) scale(1.04);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.25),
+        inset 0 0 18px rgba(var(--c), 0.26),
+        0 0 30px rgba(var(--c), 0.5);
+}
+
+.pill-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 5px rgba(var(--c), 0.9));
+}
+
+.glow-pill.tone-cyan,   .status-badge.glow-pill.tone-cyan   { --c: 45, 212, 191;  --c-text: #99f6e4; }
+.glow-pill.tone-indigo, .status-badge.glow-pill.tone-indigo { --c: 129, 140, 248; --c-text: #c7d2fe; }
+.glow-pill.tone-amber,  .status-badge.glow-pill.tone-amber  { --c: 234, 179, 8;   --c-text: #fde68a; }
+.glow-pill.tone-violet, .status-badge.glow-pill.tone-violet { --c: 167, 110, 250; --c-text: #ddd0ff; }
+.glow-pill.tone-green,  .status-badge.glow-pill.tone-green  { --c: 52, 211, 120;  --c-text: #a7f3c9; }
+.glow-pill.tone-rose,   .status-badge.glow-pill.tone-rose   { --c: 244, 90, 120;  --c-text: #fecdd6; }
+.glow-pill.tone-pink,   .status-badge.glow-pill.tone-pink   { --c: 236, 112, 190; --c-text: #fbcfe8; }
+.glow-pill.tone-slate,  .status-badge.glow-pill.tone-slate  { --c: 148, 163, 184; --c-text: #cbd5e1; }
+
+/* shine pass across pills every few seconds */
+.glow-pill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.28) 50%, transparent 65%);
+    background-size: 250% 100%;
+    background-position: 150% 0;
+    animation: pillShine 5.5s ease-in-out infinite;
+}
+
+@keyframes pillShine {
+    0%, 70%  { background-position: 150% 0; }
+    100%     { background-position: -50% 0; }
+}
+
+/* ---------- TABLES ---------- */
+
+.table-card { padding: 12px 18px !important; }
+
+th {
+    color: var(--secondary-text) !important;
+    font-size: 0.7rem !important;
+    letter-spacing: 0.1em !important;
+}
+
+td { border-top: 1px solid rgba(255, 255, 255, 0.06) !important; }
+
+tbody tr {
+    transition: background 0.25s ease, box-shadow 0.25s ease;
+}
+
+tbody tr:hover {
+    background: linear-gradient(90deg, rgba(201, 160, 220, 0.12), transparent 80%) !important;
+    box-shadow: inset 2px 0 0 var(--mauve);
+}
+
+/* ---------- PILL TABS / FILTER CHIPS ---------- */
+
+.toolbar button,
+.range-button,
+.tab,
+.pill-tab {
+    border-radius: 999px !important;
+}
+
+.toolbar input {
+    background: var(--glass) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 999px !important;
+    padding: 12px 18px !important;
+    backdrop-filter: blur(14px);
+}
+
+.toolbar button,
+.save-button,
+.network-add-contact-button {
+    background: linear-gradient(135deg, var(--mauve-deep), var(--mauve)) !important;
+    color: #1b0f22 !important;
+    font-weight: 700 !important;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.4),
+        0 10px 32px rgba(139, 90, 159, 0.45) !important;
+}
+
+.toolbar button:hover,
+.save-button:hover,
+.network-add-contact-button:hover {
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.5),
+        0 14px 44px rgba(201, 160, 220, 0.6) !important;
+}
+
+/* ---------- INPUTS ---------- */
+
+input, select, textarea {
+    background: rgba(255, 255, 255, 0.04) !important;
+    border: 1px solid var(--glass-border) !important;
+    color: var(--text) !important;
+    border-radius: 14px !important;
+}
+
+input:focus, select:focus, textarea:focus {
+    border-color: rgba(201, 160, 220, 0.7) !important;
+    box-shadow: 0 0 0 4px rgba(201, 160, 220, 0.16), 0 0 24px rgba(201, 160, 220, 0.2) !important;
+}
+
+/* ---------- ACTION BUTTONS ---------- */
+
+.action-btn {
+    background: var(--glass) !important;
+    border: 1px solid var(--glass-border) !important;
+    backdrop-filter: blur(10px);
+}
+
+.action-btn:hover {
+    background: rgba(201, 160, 220, 0.25) !important;
+    border-color: rgba(201, 160, 220, 0.6) !important;
+    box-shadow: 0 0 22px rgba(201, 160, 220, 0.4);
+}
+
+.delete-btn {
+    background: rgba(244, 90, 120, 0.12) !important;
+    border: 1px solid rgba(244, 90, 120, 0.3) !important;
+}
+
+/* ---------- MODALS ---------- */
+
+.modal-backdrop,
+.modal-overlay,
+.contact-modal-overlay {
+    background: rgba(5, 3, 9, 0.7) !important;
+    backdrop-filter: blur(12px) !important;
+}
+
+/* ---------- CHART GLOW (recharts / chart.js canvases) ---------- */
+
+canvas {
+    filter: drop-shadow(0 0 14px rgba(201, 160, 220, 0.28));
+}
+
+.recharts-line-curve,
+.recharts-area-curve {
+    filter: drop-shadow(0 0 8px rgba(201, 160, 220, 0.7));
+}
+
+/* ---------- CONTACT / NETWORK NUMBERS ---------- */
+
+.network-stat {
+    background: var(--glass) !important;
+    border: 1px solid var(--glass-border) !important;
+    border-radius: 16px !important;
+}
+
+/* ---------- AUTH + HOME ---------- */
+
+.auth-card {
+    background:
+        linear-gradient(155deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.02)),
+        rgba(14, 9, 20, 0.7) !important;
+    border: 1px solid var(--glass-border) !important;
+    box-shadow: inset 0 1px 0 var(--glass-hi), 0 40px 100px rgba(0, 0, 0, 0.6), 0 0 80px rgba(139, 90, 159, 0.2) !important;
+    backdrop-filter: blur(26px);
+}
+
+/* ---------- ENTRANCE: stagger inside grids ---------- */
+
+.dashboard-page > *,
+.dashboard-sections > *,
+.stat-grid > * {
+    animation: glassIn 0.7s var(--ease-out) both;
+}
+
+.dashboard-page > *:nth-child(2) { animation-delay: 0.08s; }
+.dashboard-page > *:nth-child(3) { animation-delay: 0.16s; }
+.dashboard-page > *:nth-child(4) { animation-delay: 0.24s; }
+.dashboard-page > *:nth-child(5) { animation-delay: 0.32s; }
+
+@keyframes glassIn {
+    from { opacity: 0; transform: translateY(26px) scale(0.97); filter: blur(10px); }
+    to   { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+
+/* ---------- REDUCED MOTION ---------- */
+
+@media (prefers-reduced-motion: reduce) {
+    .glow-pill::after,
+    .dashboard-page > *,
+    .dashboard-sections > *,
+    .stat-grid > * {
+        animation: none !important;
+    }
+    .spot::before, .spot::after { display: none; }
+}
