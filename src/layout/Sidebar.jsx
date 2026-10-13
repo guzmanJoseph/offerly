@@ -59,10 +59,11 @@ export default function Sidebar() {
             {label}
           </NavLink>
         ))}
-        <button className="logout-btn" onClick={handleLogout} type="button">
-          Log Out
-        </button>
       </nav>
+
+      <button className="logout-btn" onClick={handleLogout} type="button">
+        Log Out
+      </button>
     </aside>
   );
 }
