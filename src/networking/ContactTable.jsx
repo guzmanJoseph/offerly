@@ -3,7 +3,7 @@ import "../styles/networking.css";
 
 export default function ContactTable({ contacts, onEdit }) {
   return (
-    <div className="table-card">
+    <div className="table-card table-responsive">
       <table>
         <thead>
           <tr>
@@ -20,16 +20,16 @@ export default function ContactTable({ contacts, onEdit }) {
         <tbody>
           {contacts.map(contact => (
             <tr key={contact.id}>
-              <td>{contact.name}</td>
-              <td>{contact.company}</td>
-              <td>{contact.role}</td>
-              <td>{contact.relationship_type}</td>
-              <td>
+              <td data-label="Name"><span className="cell-primary">{contact.name}</span></td>
+              <td data-label="Company">{contact.company}</td>
+              <td data-label="Role">{contact.role}</td>
+              <td data-label="Relationship">{contact.relationship_type}</td>
+              <td data-label="Status">
                 <span className="contact-status">
                   {contact.status}
                 </span>
               </td>
-              <td>{contact.next_follow_up || "—"}</td>
+              <td data-label="Next Follow-Up">{contact.next_follow_up || "—"}</td>
 
               <td className="edit-column">
                 <button

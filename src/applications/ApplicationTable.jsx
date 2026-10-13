@@ -8,7 +8,7 @@ export default function ApplicationTable({
 }) {
 
     return (
-        <div className="table-card">
+        <div className="table-card table-responsive">
 
             <table>
 
@@ -31,17 +31,19 @@ export default function ApplicationTable({
 
                         <tr key={app.id}>
 
-                            <td>{app.company}</td>
+                            <td data-label="Company">
+                                <span className="cell-primary">{app.company}</span>
+                            </td>
 
-                            <td>{app.role}</td>
+                            <td data-label="Role">{app.role}</td>
 
-                            <td>
+                            <td data-label="Status">
                                 <StatusBadge status={app.status} />
                             </td>
 
-                            <td>{app.date_applied}</td>
+                            <td data-label="Applied">{app.date_applied}</td>
 
-                            <td>{app.location}</td>
+                            <td data-label="Location">{app.location}</td>
 
                             <td className="edit-column">
                                 <div className="action-buttons">

@@ -13,9 +13,16 @@
    ========================================================== */
 
 body {
-    font-family: Inter, sans-serif;
-    background: #0F172A;
-    color: white;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+        Roboto, sans-serif;
+
+    background: var(--background);
+    color: var(--text);
+
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+
+    overscroll-behavior-y: none;
 }
 
 a {
@@ -33,6 +40,31 @@ input {
     font: inherit;
 }
 
+:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+}
+
+/* Slim scrollbars that match the theme */
+
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.25);
+    border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.4);
+}
+
 /* ==========================================================
    APP LAYOUT
    ========================================================== */
@@ -44,48 +76,20 @@ input {
 
 .main-content {
     flex: 1;
+    min-width: 0;
+    margin-left: var(--sidebar-width);
+
     padding: 35px;
+    padding-left: calc(35px + env(safe-area-inset-left, 0px));
 }
 
-/* ==========================================================
-   SIDEBAR
-   ========================================================== */
+@media (max-width: 900px) {
+    .main-content {
+        margin-left: 0;
 
-.sidebar {
-    width: 250px;
-    background: #020617;
-    border-right: 1px solid #1E293B;
-
-    display: flex;
-    flex-direction: column;
-
-    padding: 25px;
-}
-
-.logo {
-    font-size: 28px;
-    font-weight: bold;
-
-    margin-bottom: 40px;
-}
-
-.sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.sidebar-nav a {
-    padding: 12px;
-    border-radius: 10px;
-
-    color: #94A3B8;
-}
-
-.sidebar-nav a:hover,
-.sidebar-nav a.active {
-    background: #1E293B;
-    color: white;
+        padding: 20px 16px;
+        padding-bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    }
 }
 
 /* ==========================================================
@@ -98,11 +102,11 @@ input {
 
 .page-header h1 {
     font-size: 38px;
+    letter-spacing: -0.02em;
 }
 
 .page-header p {
     color: #94A3B8;
-
     margin-top: 6px;
 }
 
@@ -111,26 +115,21 @@ input {
    ========================================================== */
 
 .stat-card {
-
-    background: #111827;
-
+    background: var(--card);
+    border: 1px solid var(--border);
     border-radius: 16px;
-
     padding: 20px;
-
-    border: 1px solid #1F2937;
+    box-shadow: var(--shadow-sm);
 }
 
 .stat-card p {
-
     color: #94A3B8;
-
     margin-bottom: 10px;
 }
 
 .stat-card h2 {
-
     font-size: 32px;
+    letter-spacing: -0.02em;
 }
 
 /* ==========================================================
@@ -138,40 +137,53 @@ input {
    ========================================================== */
 
 .toolbar {
-
     display: flex;
-
     justify-content: space-between;
-
     margin: 30px 0;
-
-    gap: 20px;
+    gap: 12px;
 }
 
 .toolbar input {
-
     flex: 1;
-
+    min-width: 0;
     padding: 12px;
-
     border-radius: 10px;
-
     background: #020617;
-
     color: white;
-
     border: 1px solid #334155;
 }
 
+.toolbar input:focus {
+    border-color: var(--blue);
+    outline: none;
+}
+
 .toolbar button {
-
     background: #2563EB;
-
     color: white;
-
     padding: 12px 20px;
-
     border-radius: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    transition: background var(--transition), box-shadow var(--transition),
+        transform var(--transition);
+}
+
+.toolbar button:hover {
+    background: #1d4ed8;
+    box-shadow: var(--glow-blue);
+}
+
+@media (max-width: 640px) {
+    .toolbar {
+        flex-direction: column;
+    }
+
+    .toolbar button {
+        width: 100%;
+        padding: 14px 20px;
+    }
 }
 
 /* ==========================================================
@@ -179,37 +191,38 @@ input {
    ========================================================== */
 
 .table-card {
-
-    background: #111827;
-
+    background: var(--card);
     border-radius: 16px;
-
     padding: 20px;
-
-    border: 1px solid #1F2937;
+    border: 1px solid var(--border);
 }
 
-table {
-
+.table-card table {
     width: 100%;
-
     border-collapse: collapse;
 }
 
 th {
-
     color: #94A3B8;
-
     text-align: left;
-
     padding: 15px;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
 
 td {
-
     padding: 15px;
-
     border-top: 1px solid #1F2937;
+}
+
+tbody tr {
+    transition: background var(--transition);
+}
+
+tbody tr:hover {
+    background: rgba(30, 41, 59, 0.35);
 }
 
 /* ==========================================================
@@ -217,12 +230,12 @@ td {
    ========================================================== */
 
 .status-badge {
-
+    display: inline-block;
     padding: 5px 10px;
-
     border-radius: 999px;
-
     font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .status-badge.applied {
@@ -239,4 +252,73 @@ td {
 
 .status-badge.rejected {
     background: #991B1B;
+}
+
+/* ===========================================
+   MOBILE: table becomes stacked cards
+=========================================== */
+
+@media (max-width: 720px) {
+
+    .table-responsive {
+        padding: 14px;
+    }
+
+    .table-responsive table,
+    .table-responsive tbody,
+    .table-responsive tr,
+    .table-responsive td {
+        display: block;
+        width: 100%;
+    }
+
+    .table-responsive thead {
+        display: none;
+    }
+
+    .table-responsive tr {
+        background: #0B1120;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 12px 14px;
+        margin-bottom: 12px;
+    }
+
+    .table-responsive tr:hover {
+        background: #0B1120;
+    }
+
+    .table-responsive td {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 7px 0;
+        border-top: none;
+        text-align: right;
+        font-size: 15px;
+    }
+
+    .table-responsive td::before {
+        content: attr(data-label);
+        color: #94A3B8;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        text-align: left;
+    }
+
+    .table-responsive td:not([data-label]) {
+        justify-content: flex-end;
+        padding-top: 10px;
+    }
+
+    .cell-primary {
+        font-weight: 700;
+    }
+
+    .edit-column .action-buttons {
+        justify-content: flex-end;
+    }
 }

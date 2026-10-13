@@ -1,22 +1,57 @@
 :root {
 
+    /* ===== Surfaces ===== */
+
     --background: #0F172A;
     --sidebar: #020617;
 
     --card: #111827;
+    --card-raised: #1E293B;
 
     --border: #1F2937;
+    --border-strong: #334155;
+
+    /* ===== Text ===== */
 
     --text: #FFFFFF;
 
     --secondary-text: #94A3B8;
 
+    /* ===== Brand + status ===== */
+
     --blue: #2563EB;
+    --blue-soft: rgba(37, 99, 235, 0.16);
 
     --green: #16A34A;
-
     --red: #DC2626;
-
     --purple: #7C3AED;
+    --amber: #D97706;
+
+    /* ===== Radii ===== */
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 22px;
+
+    /* ===== Shadows ===== */
+
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+
+    --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+
+    --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.35);
+
+    --glow-blue: 0 8px 24px rgba(37, 99, 235, 0.3);
+
+    /* ===== Motion ===== */
+
+    --transition: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+
+    /* ===== Layout ===== */
+
+    --sidebar-width: 250px;
+
+    --content-gap: 24px;
 
 }

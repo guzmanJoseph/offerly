@@ -286,10 +286,15 @@
 
 .auth-card{
 
-width:92%;
+width:100%;
 
-padding:30px;
+padding:26px 20px;
 
+}
+
+.back-to-home{
+    top:16px;
+    left:16px;
 }
 
 .auth-logo{
@@ -309,7 +314,7 @@ font-size:26px;
 .auth-wrapper {
   position: relative;
   z-index: 2;
-  width: 430px;
+  width: min(430px, 100% - 32px);
 }
 
 .back-to-home {

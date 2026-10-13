@@ -128,3 +128,30 @@
   justify-content: flex-start;
   gap: 8px;
 }
+/* ===========================================
+   MOBILE: modal becomes a full-height sheet
+=========================================== */
+
+@media (max-width: 560px) {
+
+    .modal-backdrop {
+        align-items: stretch;
+        padding: 0;
+    }
+
+    .application-modal {
+        width: 100%;
+        max-width: 100%;
+        height: 100%;
+        overflow-y: auto;
+        border-radius: 0;
+        padding: 24px 20px;
+        padding-top: calc(24px + env(safe-area-inset-top, 0px));
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .save-button {
+        padding: 15px;
+        margin-bottom: env(safe-area-inset-bottom, 0px);
+    }
+}

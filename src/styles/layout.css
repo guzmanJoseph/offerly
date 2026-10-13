@@ -1,5 +1,11 @@
+/* =========================================================
+   SIDEBAR (desktop + mobile drawer)
+========================================================= */
+
 .sidebar {
-  width: 250px;
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: var(--sidebar-width);
   min-height: 100vh;
   padding: 24px;
   background: #020617;
@@ -7,52 +13,8 @@
 
   display: flex;
   flex-direction: column;
-}
 
-.logo {
-  font-size: 28px;
-  font-weight: 800;
-  margin-bottom: 36px;
-}
-
-.sidebar-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  flex: 1;
-}
-
-.sidebar-nav a {
-  padding: 12px 14px;
-  border-radius: 12px;
-  color: #94a3b8;
-  text-decoration: none;
-}
-
-.sidebar-nav a:hover,
-.sidebar-nav a.active {
-  background: #1e293b;
-  color: white;
-}
-
-.logout-btn {
-  width: 100%;
-  padding: 14px 18px;
-  border: 1px solid rgba(239, 68, 68, 0.35);
-  border-radius: 14px;
-  background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
-  font-size: 15px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: 0.25s ease;
-}
-
-.logout-btn:hover {
-  background: #ef4444;
-  color: white;
-  transform: translateY(-2px);
-  box-shadow: 0 12px 28px rgba(239, 68, 68, 0.35);
+  z-index: 60;
 }
 
 .sidebar-brand {
@@ -78,235 +40,210 @@
   margin: 0;
   font-size: 28px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.02em;
 }
-
-/* =========================================
-   SIDEBAR
-========================================= */
-
-.sidebar {
-  position: sticky;
-  top: 0;
-
-  display: flex;
-  flex-direction: column;
-
-  width: 270px;
-  height: 100vh;
-
-  padding: 28px 22px;
-
-  background: linear-gradient(
-    180deg,
-    #0f172a 0%,
-    #101827 40%,
-    #0b1220 100%
-  );
-
-  border-right: 1px solid rgba(255,255,255,.05);
-
-  box-shadow:
-    inset -1px 0 rgba(255,255,255,.03),
-    8px 0 40px rgba(0,0,0,.25);
-
-  overflow-y: auto;
-}
-
-/* =========================================
-   LOGO
-========================================= */
-
-.sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-
-  margin-bottom: 40px;
-}
-
-.sidebar-logo {
-  width: 46px;
-  height: 46px;
-
-  object-fit: contain;
-
-  filter: drop-shadow(0 6px 18px rgba(76,141,255,.35));
-}
-
-.logo {
-  margin: 0;
-
-  color: white;
-
-  font-size: 1.55rem;
-  font-weight: 800;
-  letter-spacing: -.03em;
-}
-
-/* =========================================
-   NAVIGATION
-========================================= */
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
   gap: 8px;
-
   flex: 1;
 }
 
 .sidebar-nav a {
-  position: relative;
-
   display: flex;
   align-items: center;
+  gap: 12px;
 
-  padding: 14px 16px;
-
-  border-radius: 14px;
-
+  padding: 12px 14px;
+  border-radius: 12px;
   color: #94a3b8;
-
-  font-size: .95rem;
-  font-weight: 600;
-
   text-decoration: none;
+  font-weight: 500;
 
-  transition:
-    background .22s,
-    color .22s,
-    transform .22s,
-    box-shadow .22s;
+  border: 1px solid transparent;
+
+  transition: background var(--transition), color var(--transition),
+    border-color var(--transition);
 }
 
 .sidebar-nav a:hover {
+  background: rgba(30, 41, 59, 0.6);
   color: white;
-
-  background: rgba(255,255,255,.05);
-
-  transform: translateX(4px);
 }
-
-/* active */
 
 .sidebar-nav a.active {
+  background: linear-gradient(
+    90deg,
+    rgba(37, 99, 235, 0.18),
+    rgba(37, 99, 235, 0.05)
+  );
   color: white;
-
-  background: linear-gradient(
-    135deg,
-    rgba(59,130,246,.22),
-    rgba(99,102,241,.12)
-  );
-
-  border: 1px solid rgba(96,165,250,.28);
-
-  box-shadow:
-    inset 0 1px rgba(255,255,255,.05),
-    0 0 20px rgba(59,130,246,.12);
+  border-color: rgba(37, 99, 235, 0.35);
 }
 
-/* glowing accent */
-
-.sidebar-nav a.active::before {
-  content: "";
-
-  position: absolute;
-
-  left: -22px;
-
-  width: 4px;
-  height: 30px;
-
-  border-radius: 10px;
-
-  background: linear-gradient(
-    180deg,
-    #60a5fa,
-    #3b82f6
-  );
-
-  box-shadow: 0 0 15px rgba(59,130,246,.65);
+.nav-icon {
+  font-size: 18px;
+  flex-shrink: 0;
 }
-
-/* =========================================
-   LOGOUT BUTTON
-========================================= */
 
 .logout-btn {
-  margin-top: 28px;
-
-  padding: 14px;
-
-  border: none;
+  width: 100%;
+  padding: 13px 18px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
   border-radius: 14px;
-
-  background: rgba(255,255,255,.04);
-
-  color: #cbd5e1;
-
-  font-size: .95rem;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  font-size: 15px;
   font-weight: 700;
-
   cursor: pointer;
-
-  transition:
-    background .25s,
-    color .25s,
-    transform .25s,
-    box-shadow .25s;
+  transition: var(--transition);
 }
 
 .logout-btn:hover {
+  background: #ef4444;
   color: white;
-
-  background: rgba(239,68,68,.18);
-
   transform: translateY(-2px);
-
-  box-shadow:
-    0 8px 20px rgba(239,68,68,.18);
+  box-shadow: 0 12px 28px rgba(239, 68, 68, 0.35);
 }
-
-.logout-btn:active {
-  transform: scale(.98);
-}
-
-/* =========================================
-   SCROLLBAR
-========================================= */
 
 .sidebar::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 .sidebar::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 999px;
-
-  background: rgba(255,255,255,.08);
 }
 
 .sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255,255,255,.15);
+  background: rgba(255, 255, 255, 0.15);
 }
 
-/* =========================================
-   MOBILE
-========================================= */
+/* =========================================================
+   MOBILE TOP BAR
+========================================================= */
+
+.mobile-topbar {
+  display: none;
+}
+
+.drawer-backdrop {
+  display: none;
+}
+
+/* =========================================================
+   MOBILE: drawer navigation
+========================================================= */
 
 @media (max-width: 900px) {
+  .mobile-topbar {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    height: 60px;
+    padding: 0 14px 0 8px;
+
+    background: rgba(2, 6, 23, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+
+    border-bottom: 1px solid rgba(30, 41, 59, 0.8);
+  }
+
+  .menu-btn {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+
+    width: 44px;
+    height: 44px;
+    padding: 10px;
+
+    background: transparent;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+
+    transition: background var(--transition);
+  }
+
+  .menu-btn:hover {
+    background: rgba(30, 41, 59, 0.6);
+  }
+
+  .menu-btn span {
+    display: block;
+    height: 2px;
+    width: 100%;
+    border-radius: 2px;
+    background: #e2e8f0;
+  }
+
+  .menu-btn-placeholder {
+    visibility: hidden;
+    pointer-events: none;
+  }
+
+  .mobile-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    font-size: 19px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    color: white;
+  }
+
+  .mobile-brand-logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .drawer-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(2, 6, 23, 0.7);
+    backdrop-filter: blur(2px);
+
+    opacity: 0;
+    pointer-events: none;
+
+    transition: opacity 0.25s ease;
+
+    z-index: 55;
+  }
+
+  .drawer-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
   .sidebar {
-    width: 230px;
+    transform: translateX(-100%);
+
+    box-shadow: var(--shadow-lg);
+
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+
+    padding-top: calc(24px + env(safe-area-inset-top, 0px));
   }
 
-  .logo {
-    font-size: 1.35rem;
+  .sidebar.drawer-open {
+    transform: translateX(0);
   }
 
-  .sidebar-nav a {
-    padding: 12px 14px;
+  body.nav-locked {
+    overflow: hidden;
   }
 }
