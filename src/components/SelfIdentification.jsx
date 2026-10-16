@@ -30,17 +30,14 @@ function Question({ title, children }) {
   );
 }
 
-function AnswerSelect({
-  value,
-  onChange,
-  options,
-}) {
+function AnswerSelect({ value, onChange, options }) {
   return (
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >
       <option value="">Leave unanswered</option>
+
       {options.map((option) => (
         <option key={option} value={option}>
           {option}
@@ -51,8 +48,15 @@ function AnswerSelect({
 }
 
 export default function SelfIdentification() {
-  const [answers, setAnswers] = useState(EMPTY);
+  const [answers, setAnswers] = useState({
+    ...EMPTY,
+    raceEthnicity: [],
+  });
+
   const [allowSuggestions, setAllowSuggestions] =
+    useState(false);
+
+  const [autoFillEnabled, setAutoFillEnabled] =
     useState(false);
 
   const [loading, setLoading] = useState(true);
@@ -66,6 +70,18 @@ export default function SelfIdentification() {
     }));
   }
 
+  async function getUser() {
+    const { data, error } = await supabase.auth.getUser();
+
+    if (error) throw error;
+
+    if (!data.user) {
+      throw new Error("Please sign in.");
+    }
+
+    return data.user;
+  }
+
   useEffect(() => {
     let active = true;
 
@@ -75,13 +91,16 @@ export default function SelfIdentification() {
           await supabase.auth.getUser();
 
         if (authError) throw authError;
+
         if (!auth.user) {
           throw new Error("Please sign in.");
         }
 
         const { data, error } = await supabase
           .from("autofill_self_identification")
-          .select("answers, allow_suggestions")
+          .select(
+            "answers, allow_suggestions, auto_fill_enabled"
+          )
           .eq("user_id", auth.user.id)
           .maybeSingle();
 
@@ -91,7 +110,7 @@ export default function SelfIdentification() {
         if (data) {
           setAnswers({
             ...EMPTY,
-            ...data.answers,
+            ...(data.answers || {}),
             raceEthnicity: Array.isArray(
               data.answers?.raceEthnicity
             )
@@ -102,9 +121,15 @@ export default function SelfIdentification() {
           setAllowSuggestions(
             Boolean(data.allow_suggestions)
           );
+
+          setAutoFillEnabled(
+            Boolean(data.auto_fill_enabled)
+          );
         }
       } catch (error) {
-        if (active) setMessage(error.message);
+        if (active) {
+          setMessage(`Could not load: ${error.message}`);
+        }
       } finally {
         if (active) setLoading(false);
       }
@@ -116,18 +141,6 @@ export default function SelfIdentification() {
       active = false;
     };
   }, []);
-
-  async function getUser() {
-    const { data, error } =
-      await supabase.auth.getUser();
-
-    if (error) throw error;
-    if (!data.user) {
-      throw new Error("Please sign in.");
-    }
-
-    return data.user;
-  }
 
   async function handleSave() {
     setSaving(true);
@@ -143,14 +156,17 @@ export default function SelfIdentification() {
             user_id: user.id,
             answers,
             allow_suggestions: allowSuggestions,
+            auto_fill_enabled: autoFillEnabled,
             updated_at: new Date().toISOString(),
           },
-          { onConflict: "user_id" }
+          {
+            onConflict: "user_id",
+          }
         );
 
       if (error) throw error;
 
-      setMessage("Your choices have been saved.");
+      setMessage("Your preferences have been saved.");
     } catch (error) {
       setMessage(`Could not save: ${error.message}`);
     } finally {
@@ -159,12 +175,12 @@ export default function SelfIdentification() {
   }
 
   async function handleDelete() {
-    if (
-      !window.confirm(
-        "Permanently delete all your saved " +
-        "self-identification answers?"
-      )
-    ) return;
+    const confirmed = window.confirm(
+      "Permanently delete all your saved " +
+      "self-identification answers and preferences?"
+    );
+
+    if (!confirmed) return;
 
     setSaving(true);
     setMessage("");
@@ -183,8 +199,11 @@ export default function SelfIdentification() {
         ...EMPTY,
         raceEthnicity: [],
       });
+
       setAllowSuggestions(false);
-      setMessage("Saved answers deleted.");
+      setAutoFillEnabled(false);
+
+      setMessage("Saved answers and preferences deleted.");
     } catch (error) {
       setMessage(`Could not delete: ${error.message}`);
     } finally {
@@ -194,7 +213,11 @@ export default function SelfIdentification() {
 
   function toggleRace(option) {
     setAnswers((previous) => {
-      const current = previous.raceEthnicity;
+      const current = Array.isArray(
+        previous.raceEthnicity
+      )
+        ? previous.raceEthnicity
+        : [];
 
       if (option === "Prefer not to disclose") {
         return {
@@ -225,15 +248,19 @@ export default function SelfIdentification() {
       <div className="af-section-head">
         <div>
           <h2>Voluntary Self-Identification</h2>
+
           <p className="af-muted">
-            All questions are optional. These answers
-            are separate from your resume.
+            All questions are optional. Your answers are
+            stored separately from your resume and can
+            be deleted at any time.
           </p>
         </div>
       </div>
 
       {loading ? (
-        <p className="af-muted">Loading preferences...</p>
+        <p className="af-muted">
+          Loading preferences...
+        </p>
       ) : (
         <>
           <Question title="Are you Hispanic or Latino?">
@@ -282,6 +309,7 @@ export default function SelfIdentification() {
                     )}
                     onChange={() => toggleRace(option)}
                   />
+
                   <span>{option}</span>
                 </label>
               ))}
@@ -327,16 +355,45 @@ export default function SelfIdentification() {
               />
 
               <span>
-                Allow Offerly to suggest my saved answers
+                <strong>
+                  Suggest my saved answers
+                </strong>
+                <br />
+                Allow Offerly to suggest these answers
                 when I encounter matching questions on
                 future applications.
               </span>
             </label>
 
+            <label
+              className="self-id-auto-fill"
+              style={{ marginTop: 16 }}
+            >
+              <input
+                type="checkbox"
+                checked={autoFillEnabled}
+                onChange={(e) =>
+                  setAutoFillEnabled(e.target.checked)
+                }
+              />
+
+              <span>
+                <strong>
+                  Automatically fill my saved answers
+                </strong>
+                <br />
+                Allow Offerly to automatically select
+                my saved voluntary self-identification
+                answers when an exact matching option
+                is found on a job application.
+              </span>
+            </label>
+
             <p className="af-muted">
-              Suggestions will require your confirmation.
-              Offerly will not automatically select or
-              submit these responses.
+              Automatic filling is optional and off by
+              default. Offerly should leave unmatched or
+              ambiguous answers blank. You can change
+              these settings whenever you want.
             </p>
           </div>
 

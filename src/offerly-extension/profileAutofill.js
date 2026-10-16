@@ -1,8 +1,22 @@
 
 /*
- * Offerly popup autofill controller
- * Requires popup.js to load first.
+ * Offerly Autofill Controller
+ *
+ * Requires:
+ * popup.js
+ * dropdownDriver.js
+ * smartAnswers.js
+ *
+ * Keeps:
+ * - Existing account authentication
+ * - Personal information autofill
+ * - Default resume attachment
+ * - Automatic dropdown answers
+ * - Compact list of unanswered questions
+ *
+ * Never submits a job application.
  */
+
 (() => {
   const BASE =
     "https://cezdzqaayzlalspukapl.supabase.co";
@@ -14,16 +28,20 @@
 
   let activeTabId = null;
 
-  const normalize = (s) =>
-    String(s ?? "")
+  const normalize = (value) =>
+    String(value ?? "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
 
   function status(message) {
-    const el = $("status");
-    if (el) el.textContent = message;
+    const element = $("status");
+    if (element) element.textContent = message;
   }
+
+  // ------------------------------------
+  // SUPABASE
+  // ------------------------------------
 
   async function getRow(table, columns) {
     const session = await getValidSession();
@@ -35,7 +53,7 @@
     const params = new URLSearchParams({
       select: columns,
       user_id: `eq.${session.user.id}`,
-      limit: "1"
+      limit: "1",
     });
 
     const response = await fetch(
@@ -43,18 +61,20 @@
       {
         headers: {
           apikey: KEY,
-          Authorization: `Bearer ${session.access_token}`
-        }
+          Authorization:
+            `Bearer ${session.access_token}`,
+        },
       }
     );
 
     if (!response.ok) {
       throw new Error(
-        `Could not load ${table}: ${response.status}`
+        `Could not load ${table} (${response.status})`
       );
     }
 
     const rows = await response.json();
+
     return rows[0] || null;
   }
 
@@ -77,27 +97,45 @@
     try {
       const row = await getRow(
         "autofill_self_identification",
-        "answers,allow_suggestions"
+        "answers,allow_suggestions,auto_fill_enabled"
       );
 
-      if (!row?.allow_suggestions) return null;
-      return row.answers || null;
+      return {
+        answers: row?.answers || {},
+        allowSuggestions:
+          Boolean(row?.allow_suggestions),
+        autoFillEnabled:
+          Boolean(row?.auto_fill_enabled),
+      };
     } catch (error) {
-      // Optional data should not block basic autofill.
-      console.warn("Self-ID suggestions unavailable:", error);
-      return null;
+      console.warn(
+        "Could not load voluntary answer preferences:",
+        error
+      );
+
+      // Fail closed: never autofill voluntary
+      // disclosures if consent can't be loaded.
+      return {
+        answers: {},
+        allowSuggestions: false,
+        autoFillEnabled: false,
+      };
     }
   }
+
+  // ------------------------------------
+  // APPLICATION ENGINE
+  // ------------------------------------
 
   async function prepareEngine() {
     const [tab] = await chrome.tabs.query({
       active: true,
-      currentWindow: true
+      currentWindow: true,
     });
 
     if (
       !tab?.id ||
-      !/^https?:\/\//.test(tab.url || "")
+      !/^https?:\/\//i.test(tab.url || "")
     ) {
       throw new Error(
         "Open a job application webpage first."
@@ -108,15 +146,17 @@
 
     await chrome.scripting.executeScript({
       target: { tabId: activeTabId },
-      files: ["formEngine.js"]
+      files: ["formEngine.js"],
     });
   }
 
-  async function runEngine(method, ...args) {
+  async function callPageEngine(method, ...args) {
     const results = await chrome.scripting.executeScript({
       target: { tabId: activeTabId },
+
       func: async (methodName, parameters) => {
-        const fn = globalThis.offerlyEngine?.[methodName];
+        const engine = globalThis.offerlyEngine;
+        const fn = engine?.[methodName];
 
         if (typeof fn !== "function") {
           throw new Error(
@@ -126,28 +166,75 @@
 
         return await fn(...parameters);
       },
-      args: [method, args]
+
+      args: [method, args],
     });
 
     return results?.[0]?.result;
   }
 
-  async function scanFields() {
-    const result = await runEngine("scan");
+  async function runEngine(method, ...args) {
+    if (!activeTabId) {
+      throw new Error("No active application tab.");
+    }
 
-    if (!Array.isArray(result)) {
+    const driver = window.offerlyDropdownDriver;
+
+    if (
+      driver &&
+      (
+        method === "getDropdownOptions" ||
+        method === "fillAnswer"
+      )
+    ) {
+      const fieldId = args[0];
+
+      const fields = await callPageEngine("scan");
+
+      const field = fields.find(
+        (item) => item.id === fieldId
+      );
+
+      if (field?.type === "custom") {
+        if (method === "getDropdownOptions") {
+          return driver.openAndRead(
+            activeTabId,
+            fieldId
+          );
+        }
+
+        return driver.fill(
+          activeTabId,
+          fieldId,
+          args[1]
+        );
+      }
+    }
+
+    return callPageEngine(method, ...args);
+  }
+
+  async function scanFields() {
+    const fields = await runEngine("scan");
+
+    if (!Array.isArray(fields)) {
       throw new Error(
-        "Application scan failed. Reload the extension."
+        "Application scan failed. Reload Offerly."
       );
     }
 
-    return result;
+    return fields;
   }
 
-  function questionNeeded(field) {
+  // ------------------------------------
+  // COMPACT MANUAL REVIEW
+  // ------------------------------------
+
+  function needsAttention(field) {
     if (
       !field ||
       field.type === "file" ||
+      field.type === "choice" ||
       String(field.value || "").trim()
     ) {
       return false;
@@ -160,8 +247,8 @@
       label === "search" ||
       label === "off" ||
       label.startsWith("search off") ||
-      label.startsWith("off ") ||
-      label.startsWith("field ")
+      label.startsWith("field ") ||
+      label.startsWith("react select")
     ) {
       return false;
     }
@@ -175,305 +262,67 @@
     );
   }
 
-  function suggestedAnswer(field, profile, selfId) {
-    if (!selfId || !field.sensitive) return "";
-
-    const label = normalize(field.label);
-
-    if (/hispanic|latino/.test(label)) {
-      return selfId.hispanicLatino || "";
-    }
-
-    if (/veteran/.test(label)) {
-      return selfId.veteranStatus || "";
-    }
-
-    if (/gender/.test(label)) {
-      return selfId.gender || "";
-    }
-
-    if (/disabil/.test(label)) {
-      return selfId.disabilityStatus || "";
-    }
-
-    // Race/ethnicity can be multi-select.
-    // Do not reduce multiple saved identities
-    // to one option without user review.
-    return "";
-  }
-
-  function createText(tag, content, className = "") {
-    const element = document.createElement(tag);
-    element.textContent = content;
-    if (className) element.className = className;
-    return element;
-  }
-
-  async function fillKnownDropdowns(fields, profile) {
-    let count = 0;
-
-    for (const field of fields) {
-      if (
-        !["select", "custom"].includes(field.type) ||
-        field.value ||
-        field.sensitive ||
-        field.employmentQuestion
-      ) continue;
-
-      const label = normalize(field.label);
-
-      // Do not assume a phone dialing country is
-      // identical to country of residence.
-      const isResidence =
-        label === "country of residence" ||
-        label === "residence country";
-
-      if (!isResidence || !profile.country) continue;
-
-      try {
-        const result = await runEngine(
-          "fillAnswer",
-          field.id,
-          profile.country
-        );
-
-        if (result?.ok) count++;
-      } catch (error) {
-        console.warn("Country dropdown:", error);
-      }
-    }
-
-    return count;
-  }
-
-  async function showQuestions(fields, profile, selfId) {
+  function showCompactNeedsAttention(fields) {
     $("offerlyQuestionReview")?.remove();
 
-    const questions = fields.filter(questionNeeded);
-
-    if (!questions.length) return 0;
+    const missing = fields.filter(needsAttention);
 
     const section = document.createElement("section");
     section.id = "offerlyQuestionReview";
     section.className = "offerly-review";
 
-    section.append(
-      createText(
-        "h3",
-        `Questions to review (${questions.length})`
-      ),
-      createText(
-        "p",
-        "Select answers below. Offerly won't submit the application."
-      )
-    );
+    const heading = document.createElement("h3");
 
-    const entries = [];
+    heading.textContent = missing.length
+      ? `Needs your attention (${missing.length})`
+      : "Autofill review";
 
-    for (const field of questions) {
-      const wrapper = document.createElement("div");
-      wrapper.className = "offerly-question";
+    section.appendChild(heading);
 
-      const label = createText(
-        "label",
-        field.label.replace(/\s*\|\s*/g, " · ")
-      );
+    const message = document.createElement("p");
 
-      wrapper.append(label);
+    message.textContent = missing.length
+      ? "Complete these fields directly on the application:"
+      : "No remaining recognized questions were detected. Review the entire application before submitting.";
 
-      const dropdown =
-        field.type === "custom" ||
-        field.type === "select";
+    section.appendChild(message);
 
-      const input = document.createElement(
-        dropdown ? "select" : "input"
-      );
+    if (missing.length) {
+      const list = document.createElement("ul");
+      list.className = "offerly-missing-list";
 
-      if (!dropdown) {
-        input.type = "text";
-        input.placeholder = "Enter your answer";
+      const seen = new Set();
+
+      for (const field of missing) {
+        const key = normalize(field.label);
+
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const item = document.createElement("li");
+
+        item.textContent = field.label;
+        list.appendChild(item);
       }
 
-      function setOptions(options) {
-        input.replaceChildren(
-          new Option("Choose an answer", "")
-        );
-
-        for (const option of options || []) {
-          if (!option?.label) continue;
-
-          input.add(
-            new Option(option.label, option.value)
-          );
-        }
-      }
-
-      let suggestion = suggestedAnswer(
-        field, profile, selfId
-      );
-
-      function offerSuggestion() {
-        if (!suggestion || !dropdown) return;
-
-        const matching = [...input.options].find(
-          (option) =>
-            normalize(option.textContent) ===
-            normalize(suggestion)
-        );
-
-        if (!matching) return;
-
-        // Preselect only in the Offerly review UI,
-        // never in the employer's application.
-        input.value = matching.value;
-
-        wrapper.append(
-          createText(
-            "p",
-            "Suggested from your saved preferences. " +
-            "Please confirm before applying.",
-            "af-muted"
-          )
-        );
-      }
-
-      if (dropdown) {
-        setOptions(field.options);
-
-        if (field.type === "custom") {
-          const load = createText(
-            "button",
-            "Show dropdown options",
-            "secondary-btn"
-          );
-
-          load.type = "button";
-
-          load.addEventListener("click", async () => {
-            load.disabled = true;
-            load.textContent = "Loading options...";
-
-            try {
-              const result = await runEngine(
-                "getDropdownOptions",
-                field.id
-              );
-
-              if (result?.ok && result.options?.length) {
-                setOptions(result.options);
-                offerSuggestion();
-                load.textContent = "Refresh options";
-              } else {
-                load.textContent =
-                  result?.reason || "Options unavailable";
-              }
-            } catch (error) {
-              console.error("Dropdown loading:", error);
-              load.textContent = "Could not load options";
-            } finally {
-              load.disabled = false;
-            }
-          });
-
-          wrapper.append(load);
-        } else {
-          offerSuggestion();
-        }
-      }
-
-      wrapper.append(input);
-
-      if (field.sensitive) {
-        wrapper.append(
-          createText(
-            "p",
-            "Voluntary information. You decide whether to disclose it.",
-            "af-muted"
-          )
-        );
-      }
-
-      if (field.employmentQuestion) {
-        wrapper.append(
-          createText(
-            "p",
-            "Check this employer's exact eligibility requirements.",
-            "af-muted"
-          )
-        );
-      }
-
-      entries.push({ field, input });
-      section.append(wrapper);
+      section.appendChild(list);
     }
 
-    const applyButton = createText(
-      "button",
-      "Apply Selected Answers"
-    );
+    const button = $("autofillBtn");
 
-    applyButton.type = "button";
+    if (button) {
+      button.insertAdjacentElement(
+        "afterend",
+        section
+      );
+    }
 
-    applyButton.addEventListener("click", async () => {
-      applyButton.disabled = true;
-
-      let applied = 0;
-      const failures = [];
-
-      try {
-        for (const { field, input } of entries) {
-          if (!String(input.value || "").trim()) {
-            continue;
-          }
-
-          try {
-            const result = await runEngine(
-              "fillAnswer",
-              field.id,
-              input.value
-            );
-
-            if (result?.ok) {
-              applied++;
-            } else {
-              failures.push(
-                `${field.label}: ${result?.reason || "not filled"}`
-              );
-            }
-          } catch (error) {
-            failures.push(
-              `${field.label}: ${error.message}`
-            );
-          }
-        }
-
-        status(
-          `${applied} answers applied. ` +
-          (failures.length
-            ? `${failures.length} need manual review.`
-            : "Review the application before submitting.")
-        );
-
-        if (failures.length) {
-          console.warn(
-            "Offerly fields requiring review:",
-            failures
-          );
-        }
-      } finally {
-        applyButton.disabled = false;
-      }
-    });
-
-    section.append(applyButton);
-
-    $("autofillBtn")?.insertAdjacentElement(
-      "afterend",
-      section
-    );
-
-    return questions.length;
+    return missing.length;
   }
+
+  // ------------------------------------
+  // DEFAULT RESUME
+  // ------------------------------------
 
   async function getDefaultResume() {
     const preference = await getRow(
@@ -482,6 +331,7 @@
     );
 
     const stored = preference?.default_resume_name;
+
     if (!stored) return null;
 
     if (
@@ -504,8 +354,9 @@
       {
         headers: {
           apikey: KEY,
-          Authorization: `Bearer ${session.access_token}`
-        }
+          Authorization:
+            `Bearer ${session.access_token}`,
+        },
       }
     );
 
@@ -517,7 +368,10 @@
 
     const blob = await response.blob();
 
-    if (!blob.size || blob.size > 5 * 1024 * 1024) {
+    if (
+      !blob.size ||
+      blob.size > 5 * 1024 * 1024
+    ) {
       throw new Error(
         "Default resume must be between 1 byte and 5 MB."
       );
@@ -529,7 +383,10 @@
 
     const lower = filename.toLowerCase();
 
-    if (!lower.endsWith(".pdf") && !lower.endsWith(".docx")) {
+    if (
+      !lower.endsWith(".pdf") &&
+      !lower.endsWith(".docx")
+    ) {
       throw new Error("Unsupported resume format.");
     }
 
@@ -540,22 +397,29 @@
         : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       bytes: Array.from(
         new Uint8Array(await blob.arrayBuffer())
-      )
+      ),
     };
   }
 
+  // ------------------------------------
+  // MAIN AUTOFILL
+  // ------------------------------------
+
   async function handleAutofill() {
     const button = $("autofillBtn");
+
     if (!button || button.disabled) return;
 
     button.disabled = true;
+
+    $("offerlyQuestionReview")?.remove();
 
     try {
       status("Loading your Offerly profile...");
 
       const [profile, selfId] = await Promise.all([
         getProfile(),
-        getSelfIdentification()
+        getSelfIdentification(),
       ]);
 
       await prepareEngine();
@@ -567,19 +431,34 @@
         profile
       );
 
-      status("Checking application dropdowns...");
+      status("Scanning application questions...");
 
-      const before = await scanFields();
+      const fields = await scanFields();
 
-      const dropdownsFilled =
-        await fillKnownDropdowns(before, profile);
+      let smartResult = {
+        filled: 0,
+        skipped: [],
+        failed: [],
+      };
 
-      const after = await scanFields();
+      if (window.offerlySmartAnswers?.apply) {
+        status("Automatically filling saved answers...");
 
-      const questions = await showQuestions(
-        after, profile, selfId
-      );
+        smartResult =
+          await window.offerlySmartAnswers.apply({
+            fields,
+            profile,
+            selfId,
+            tabId: activeTabId,
+            runEngine,
+          });
+      } else {
+        console.warn(
+          "smartAnswers.js is not loaded"
+        );
+      }
 
+      // Resume attachment runs independently.
       let resumeMessage =
         "No default resume selected.";
 
@@ -598,23 +477,54 @@
 
           resumeMessage = result?.ok
             ? `${resume.filename} selected. Verify the website accepted it.`
-            : `Resume attachment needs review: ${
-                result?.reason || "unsupported input"
+            : `Resume needs review: ${
+                result?.reason || "Upload not confirmed"
               }`;
         }
       } catch (error) {
-        console.error("Resume attachment:", error);
-        resumeMessage = `Resume issue: ${error.message}`;
+        console.error(
+          "Resume attachment:",
+          error
+        );
+
+        resumeMessage =
+          `Resume issue: ${error.message}`;
       }
 
+      // Re-scan after ALL filling attempts.
+      const finalFields = await scanFields();
+
+      const missing =
+        showCompactNeedsAttention(finalFields);
+
+      const totalFilled =
+        (textResult?.filled || 0) +
+        (smartResult?.filled || 0);
+
       status(
-        `${(textResult?.filled || 0) + dropdownsFilled} fields filled. ` +
-        `${questions} questions to review. ` +
+        `${totalFilled} fields filled. ` +
+        `${missing} fields need attention. ` +
         resumeMessage
       );
+
+      if (
+        smartResult.failed?.length ||
+        smartResult.skipped?.length
+      ) {
+        console.info(
+          "Offerly unresolved saved answers:",
+          smartResult
+        );
+      }
     } catch (error) {
-      console.error("Offerly autofill:", error);
-      status(error.message || "Autofill failed.");
+      console.error(
+        "Offerly autofill failed:",
+        error
+      );
+
+      status(
+        error.message || "Autofill failed."
+      );
     } finally {
       button.disabled = false;
     }

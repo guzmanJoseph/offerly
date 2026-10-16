@@ -850,12 +850,223 @@
   // EXPOSE ENGINE TO OFFERLY POPUP
   // ---------------------------------------------
 
+
+function elementPoint(element) {
+  if (!element || !visible(element)) return null;
+
+  const rect = element.getBoundingClientRect();
+
+  const x = rect.left + rect.width / 2;
+  const y = rect.top + rect.height / 2;
+
+  // Coordinates for Chrome browser input are relative
+  // to the visible page viewport.
+  if (
+    x < 0 ||
+    y < 0 ||
+    x >= window.innerWidth ||
+    y >= window.innerHeight
+  ) {
+    return null;
+  }
+
+  return { x, y };
+}
+
+
+async function dropdownTarget(id) {
+  const element = find(id);
+
+  if (!element) {
+    return {
+      ok: false,
+      reason: "Dropdown not found",
+    };
+  }
+
+  if (element.tagName === "SELECT") {
+    return {
+      ok: true,
+      type: "select",
+      options: [...element.options]
+        .filter(
+          (option) =>
+            !option.disabled && option.value
+        )
+        .map((option) => ({
+          label: option.textContent.trim(),
+          value: option.value,
+        })),
+    };
+  }
+
+  if (typeOf(element) !== "custom") {
+    return {
+      ok: false,
+      reason: "Not a custom dropdown",
+    };
+  }
+
+  const control =
+    element.closest(".select__control") ||
+    element;
+
+  control.scrollIntoView({
+    behavior: "instant",
+    block: "center",
+    inline: "nearest",
+  });
+
+  await wait(250);
+
+  const point = elementPoint(control);
+
+  return point
+    ? {
+        ok: true,
+        type: "custom",
+        point,
+      }
+    : {
+        ok: false,
+        reason:
+          "Dropdown couldn't be positioned onscreen",
+      };
+}
+
+
+function dropdownMenuRoot(element) {
+  const id =
+    element.getAttribute("aria-controls") ||
+    element.getAttribute("aria-owns");
+
+  if (id) {
+    const root = document.getElementById(id);
+    if (root && visible(root)) return root;
+  }
+
+  const roots = [
+    ...document.querySelectorAll(
+      "[role='listbox'], " +
+      ".select__menu-list, " +
+      "[class*='__menu-list']"
+    ),
+  ].filter(visible);
+
+  // Never select options from an ambiguous menu.
+  return roots.length === 1 ? roots[0] : null;
+}
+
+function dropdownOptionNodes(id) {
+  const element = find(id);
+
+  if (!element || typeOf(element) !== "custom") {
+    return [];
+  }
+
+  const root = dropdownMenuRoot(element);
+
+  if (!root) return [];
+
+  return [...root.querySelectorAll(
+    "[role='option'], " +
+    ".select__option, " +
+    "[class*='__option']"
+  )].filter(
+    (option) =>
+      visible(option) &&
+      option.getAttribute("aria-disabled") !== "true" &&
+      option.getAttribute("data-disabled") !== "true"
+  );
+}
+
+function dropdownChoices(id) {
+  const seen = new Set();
+
+  return dropdownOptionNodes(id)
+    .map((element) => {
+      const label = (
+        element.getAttribute("aria-label") ||
+        element.textContent ||
+        ""
+      ).trim();
+
+      return { label, value: label };
+    })
+    .filter((option) => {
+      const key = normalize(option.label);
+
+      if (!key || seen.has(key)) return false;
+
+      seen.add(key);
+      return true;
+    });
+}
+
+
+async function dropdownOptionTarget(id, label) {
+  const matches = dropdownOptionNodes(id).filter(
+    (option) =>
+      normalize(
+        option.getAttribute("aria-label") ||
+        option.textContent
+      ) === normalize(label)
+  );
+
+  if (matches.length !== 1) {
+    return {
+      ok: false,
+      reason:
+        "Matching option is missing or ambiguous",
+    };
+  }
+
+  const option = matches[0];
+
+  option.scrollIntoView({
+    behavior: "instant",
+    block: "nearest",
+    inline: "nearest",
+  });
+
+  await wait(150);
+
+  const point = elementPoint(option);
+
+  return point
+    ? {
+        ok: true,
+        point,
+      }
+    : {
+        ok: false,
+        reason:
+          "Option could not be positioned onscreen",
+      };
+}
+
+
+function dropdownSelection(id) {
+  const element = find(id);
+
+  if (!element) return { value: "" };
+
+  return {
+    value: selectedCustomValue(element),
+  };
+}
+
+
   // Replace any previously injected implementation.
   globalThis.offerlyEngine = {
-    scan,
-    fillText,
-    fillAnswer,
-    getDropdownOptions,
-    attachResume,
-  };
+  scan,
+  fillText,
+  fillAnswer,
+  getDropdownOptions,
+  attachResume,
+  dropdownTarget,
+  dropdownChoices,
+  dropdownOptionTarget,
+  dropdownSelection,
+};
 })();
