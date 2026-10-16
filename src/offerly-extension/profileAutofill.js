@@ -2,19 +2,16 @@
 /*
  * Offerly Autofill Controller
  *
- * Requires:
- * popup.js
- * dropdownDriver.js
- * smartAnswers.js
+ * Works with:
+ * - popup.js
+ * - dropdownDriver.js
+ * - smartAnswers.js
+ * - formEngine.js
+ * - choiceEngine.js
+ * - universalTextEngine.js
+ * - workdayExperienceEngine.js
  *
- * Keeps:
- * - Existing account authentication
- * - Personal information autofill
- * - Default resume attachment
- * - Automatic dropdown answers
- * - Compact list of unanswered questions
- *
- * Never submits a job application.
+ * Never submits applications.
  */
 
 (() => {
@@ -26,17 +23,20 @@
 
   const $ = (id) => document.getElementById(id);
 
-  let activeTabId = null;
-
   const normalize = (value) =>
     String(value ?? "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
 
+  let activeTabId = null;
+
   function status(message) {
     const element = $("status");
-    if (element) element.textContent = message;
+
+    if (element) {
+      element.textContent = message;
+    }
   }
 
   // ------------------------------------
@@ -113,8 +113,8 @@
         error
       );
 
-      // Fail closed: never autofill voluntary
-      // disclosures if consent can't be loaded.
+      // Do not autofill voluntary disclosures
+      // if permission settings cannot be loaded.
       return {
         answers: {},
         allowSuggestions: false,
@@ -148,6 +148,8 @@
       target: { tabId: activeTabId },
       files: ["formEngine.js"],
     });
+
+    return tab;
   }
 
   async function callPageEngine(method, ...args) {
@@ -155,8 +157,8 @@
       target: { tabId: activeTabId },
 
       func: async (methodName, parameters) => {
-        const engine = globalThis.offerlyEngine;
-        const fn = engine?.[methodName];
+        const fn =
+          globalThis.offerlyEngine?.[methodName];
 
         if (typeof fn !== "function") {
           throw new Error(
@@ -182,30 +184,27 @@
 
     if (
       driver &&
-      (
-        method === "getDropdownOptions" ||
-        method === "fillAnswer"
+      ["getDropdownOptions", "fillAnswer"].includes(
+        method
       )
     ) {
-      const fieldId = args[0];
-
       const fields = await callPageEngine("scan");
 
       const field = fields.find(
-        (item) => item.id === fieldId
+        (item) => item.id === args[0]
       );
 
       if (field?.type === "custom") {
         if (method === "getDropdownOptions") {
           return driver.openAndRead(
             activeTabId,
-            fieldId
+            args[0]
           );
         }
 
         return driver.fill(
           activeTabId,
-          fieldId,
+          args[0],
           args[1]
         );
       }
@@ -227,14 +226,13 @@
   }
 
   // ------------------------------------
-  // COMPACT MANUAL REVIEW
+  // NEEDS ATTENTION PANEL
   // ------------------------------------
 
   function needsAttention(field) {
     if (
       !field ||
-      field.type === "file" ||
-      field.type === "choice" ||
+      ["file", "choice"].includes(field.type) ||
       String(field.value || "").trim()
     ) {
       return false;
@@ -262,62 +260,75 @@
     );
   }
 
-  function showCompactNeedsAttention(fields) {
+  function showCompactNeedsAttention(
+    fields,
+    extra = []
+  ) {
     $("offerlyQuestionReview")?.remove();
 
-    const missing = fields.filter(needsAttention);
+    const questions = [
+      ...fields
+        .filter(needsAttention)
+        .map((field) => field.label),
+      ...extra,
+    ];
 
-    const section = document.createElement("section");
+    const unique = [
+      ...new Map(
+        questions
+          .filter(Boolean)
+          .map((question) => [
+            normalize(question),
+            question,
+          ])
+      ).values(),
+    ];
+
+    const section = document.createElement(
+      "section"
+    );
+
     section.id = "offerlyQuestionReview";
     section.className = "offerly-review";
 
     const heading = document.createElement("h3");
 
-    heading.textContent = missing.length
-      ? `Needs your attention (${missing.length})`
+    heading.textContent = unique.length
+      ? `Needs your attention (${unique.length})`
       : "Autofill review";
 
     section.appendChild(heading);
 
     const message = document.createElement("p");
 
-    message.textContent = missing.length
+    message.textContent = unique.length
       ? "Complete these fields directly on the application:"
       : "No remaining recognized questions were detected. Review the entire application before submitting.";
 
     section.appendChild(message);
 
-    if (missing.length) {
+    if (unique.length) {
       const list = document.createElement("ul");
+
       list.className = "offerly-missing-list";
 
-      const seen = new Set();
-
-      for (const field of missing) {
-        const key = normalize(field.label);
-
-        if (seen.has(key)) continue;
-        seen.add(key);
-
+      for (const question of unique) {
         const item = document.createElement("li");
 
-        item.textContent = field.label;
+        item.textContent = question;
+
         list.appendChild(item);
       }
 
       section.appendChild(list);
     }
 
-    const button = $("autofillBtn");
+    $("autofillBtn")?.insertAdjacentElement(
+      "afterend",
+      section
+    );
 
-    if (button) {
-      button.insertAdjacentElement(
-        "afterend",
-        section
-      );
-    }
-
-    return missing.length;
+    return unique.length;
   }
 
   // ------------------------------------
@@ -330,7 +341,8 @@
       "default_resume_name"
     );
 
-    const stored = preference?.default_resume_name;
+    const stored =
+      preference?.default_resume_name;
 
     if (!stored) return null;
 
@@ -345,7 +357,10 @@
 
     const session = await getValidSession();
 
-    const path = [session.user.id, stored]
+    const path = [
+      session.user.id,
+      stored,
+    ]
       .map(encodeURIComponent)
       .join("/");
 
@@ -387,18 +402,210 @@
       !lower.endsWith(".pdf") &&
       !lower.endsWith(".docx")
     ) {
-      throw new Error("Unsupported resume format.");
+      throw new Error(
+        "Unsupported resume format."
+      );
     }
 
     return {
       filename,
+
       mime: lower.endsWith(".pdf")
         ? "application/pdf"
         : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+
       bytes: Array.from(
-        new Uint8Array(await blob.arrayBuffer())
+        new Uint8Array(
+          await blob.arrayBuffer()
+        )
       ),
     };
+  }
+
+  // ------------------------------------
+  // WORKDAY EXPERIENCE AND EDUCATION
+  // ------------------------------------
+
+  async function runWorkday(profile, tab) {
+    const fallback = {
+      filled: 0,
+      needsAttention: [],
+    };
+
+    if (
+      !/(^|\.)myworkdayjobs\.com$/i.test(
+        new URL(tab.url).hostname
+      )
+    ) {
+      return fallback;
+    }
+
+    try {
+      status(
+        "Filling Workday experience and education..."
+      );
+
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTabId },
+        files: ["workdayExperienceEngine.js"],
+      });
+
+      const results =
+        await chrome.scripting.executeScript({
+          target: { tabId: activeTabId },
+
+          func: async (savedProfile) => {
+            const engine =
+              globalThis.offerlyWorkdayExperience;
+
+            if (
+              typeof engine?.fill !== "function"
+            ) {
+              throw new Error(
+                "Workday adapter not loaded."
+              );
+            }
+
+            return await engine.fill(
+              savedProfile
+            );
+          },
+
+          args: [profile],
+        });
+
+      const result =
+        results?.[0]?.result || fallback;
+
+      console.info(
+        "Offerly Workday experience:",
+        result
+      );
+
+      return result;
+    } catch (error) {
+      console.warn(
+        "Offerly Workday adapter:",
+        error
+      );
+
+      return fallback;
+    }
+  }
+
+  // ------------------------------------
+  // UNIVERSAL TEXT AUTOFILL
+  // ------------------------------------
+
+  async function runUniversal(profile) {
+    const fallback = {
+      filled: 0,
+      skipped: 0,
+    };
+
+    try {
+      status(
+        "Checking additional application fields..."
+      );
+
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTabId },
+        files: ["universalTextEngine.js"],
+      });
+
+      const results =
+        await chrome.scripting.executeScript({
+          target: { tabId: activeTabId },
+
+          func: (savedProfile) => {
+            return (
+              globalThis.offerlyUniversalText
+                ?.fill(savedProfile) || {
+                  filled: 0,
+                  skipped: 0,
+                }
+            );
+          },
+
+          args: [profile],
+        });
+
+      const result =
+        results?.[0]?.result || fallback;
+
+      console.info(
+        "Offerly universal autofill:",
+        result
+      );
+
+      return result;
+    } catch (error) {
+      console.warn(
+        "Universal autofill fallback:",
+        error
+      );
+
+      return fallback;
+    }
+  }
+
+  // ------------------------------------
+  // CHECKBOX AND BUTTON AUTOFILL
+  // ------------------------------------
+
+  async function runChoices(profile, selfId) {
+    const fallback = {
+      filled: 0,
+      skipped: [],
+      failed: [],
+      needsAttention: [],
+    };
+
+    try {
+      status(
+        "Filling saved button and checkbox answers..."
+      );
+
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTabId },
+        files: ["choiceEngine.js"],
+      });
+
+      const results =
+        await chrome.scripting.executeScript({
+          target: { tabId: activeTabId },
+
+          func: async (
+            savedProfile,
+            selfIdentification
+          ) => {
+            return await globalThis
+              .offerlyChoiceEngine.apply(
+                savedProfile,
+                selfIdentification
+              );
+          },
+
+          args: [profile, selfId],
+        });
+
+      const result =
+        results?.[0]?.result || fallback;
+
+      console.info(
+        "Offerly button autofill:",
+        result
+      );
+
+      return result;
+    } catch (error) {
+      console.warn(
+        "Offerly choice autofill failed:",
+        error
+      );
+
+      return fallback;
+    }
   }
 
   // ------------------------------------
@@ -417,12 +624,18 @@
     try {
       status("Loading your Offerly profile...");
 
-      const [profile, selfId] = await Promise.all([
-        getProfile(),
-        getSelfIdentification(),
-      ]);
+      const [profile, selfId] =
+        await Promise.all([
+          getProfile(),
+          getSelfIdentification(),
+        ]);
 
-      await prepareEngine();
+      const tab = await prepareEngine();
+
+      // Workday fills saved experience and
+      // education before generic autofill.
+      const workdayResult =
+        await runWorkday(profile, tab);
 
       status("Filling personal information...");
 
@@ -431,9 +644,23 @@
         profile
       );
 
-      status("Scanning application questions...");
+      const universalResult =
+        await runUniversal(profile);
 
-      const fields = await scanFields();
+      
+status("Scanning application questions...");
+
+let fields = [];
+
+try {
+  fields = await scanFields();
+} catch (error) {
+  console.warn(
+    "Offerly question scan failed. Continuing with resume upload:",
+    error
+  );
+}
+
 
       let smartResult = {
         filled: 0,
@@ -441,8 +668,13 @@
         failed: [],
       };
 
-      if (window.offerlySmartAnswers?.apply) {
-        status("Automatically filling saved answers...");
+      if (
+  fields.length > 0 &&
+  window.offerlySmartAnswers?.apply
+) {
+        status(
+          "Automatically filling saved answers..."
+        );
 
         smartResult =
           await window.offerlySmartAnswers.apply({
@@ -454,11 +686,17 @@
           });
       } else {
         console.warn(
-          "smartAnswers.js is not loaded"
+          "smartAnswers.js is not loaded."
         );
       }
 
-      // Resume attachment runs independently.
+      const choiceResult =
+        await runChoices(profile, selfId);
+
+      // ------------------------------------
+      // RESUME UPLOAD
+      // ------------------------------------
+
       let resumeMessage =
         "No default resume selected.";
 
@@ -478,7 +716,8 @@
           resumeMessage = result?.ok
             ? `${resume.filename} selected. Verify the website accepted it.`
             : `Resume needs review: ${
-                result?.reason || "Upload not confirmed"
+                result?.reason ||
+                "Upload not confirmed"
               }`;
         }
       } catch (error) {
@@ -491,15 +730,41 @@
           `Resume issue: ${error.message}`;
       }
 
-      // Re-scan after ALL filling attempts.
-      const finalFields = await scanFields();
+      // ------------------------------------
+      // FINAL REVIEW
+      // ------------------------------------
 
-      const missing =
-        showCompactNeedsAttention(finalFields);
+      
+// Re-scan without allowing a failed question
+// scanner to interrupt the autofill process.
+let finalFields = [];
+
+try {
+  finalFields = await scanFields();
+} catch (error) {
+  console.warn(
+    "Offerly final question scan failed:",
+    error
+  );
+}
+
+const missing = finalFields.length
+  ? showCompactNeedsAttention(finalFields)
+  : 0;
+
+if (!finalFields.length) {
+  status(
+    "Question scanning unavailable. Review application fields manually."
+  );
+}
+
 
       const totalFilled =
         (textResult?.filled || 0) +
-        (smartResult?.filled || 0);
+        (universalResult?.filled || 0) +
+        (smartResult?.filled || 0) +
+        (choiceResult?.filled || 0) +
+        (workdayResult?.filled || 0);
 
       status(
         `${totalFilled} fields filled. ` +
@@ -529,6 +794,10 @@
       button.disabled = false;
     }
   }
+
+  // ------------------------------------
+  // CONNECT AUTOFILL BUTTON
+  // ------------------------------------
 
   $("autofillBtn")?.addEventListener(
     "click",

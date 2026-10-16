@@ -148,6 +148,76 @@ export async function readResume(file) {
   throw new Error("Please upload a PDF, DOCX or TXT file.");
 }
 
+
+// Convert an explicit month/year to MM/YYYY.
+// Year-only dates remain unresolved.
+function toMonthYear(value) {
+  const text = clean(value).replace(/\.$/, "");
+
+  const months = {
+    jan: "01", feb: "02", mar: "03",
+    apr: "04", may: "05", jun: "06",
+    jul: "07", aug: "08", sep: "09",
+    oct: "10", nov: "11", dec: "12"
+  };
+
+  let match = text.match(/^(\d{1,2})\/(\d{4})$/);
+
+  if (match) {
+    const month = Number(match[1]);
+
+    return month >= 1 && month <= 12
+      ? `${String(month).padStart(2, "0")}/${match[2]}`
+      : "";
+  }
+
+  match = text.match(/^(\d{4})-(\d{1,2})$/);
+
+  if (match) {
+    const month = Number(match[2]);
+
+    return month >= 1 && month <= 12
+      ? `${String(month).padStart(2, "0")}/${match[1]}`
+      : "";
+  }
+
+  match = text.match(/^([a-z]+)\.?\s+(\d{4})$/i);
+
+  if (match) {
+    const month = months[
+      match[1].toLowerCase().slice(0, 3)
+    ];
+
+    return month ? `${month}/${match[2]}` : "";
+  }
+
+  return "";
+}
+
+function structuredDates(value) {
+  const token =
+    "(?:\\d{1,2}/\\d{4}|\\d{4}-\\d{1,2}|" +
+    "[A-Za-z]+\\.?\\s+\\d{4}|\\d{4})";
+
+  const pattern = new RegExp(
+    `(${token})\\s*(?:-|–|—|to)\\s*` +
+    `(${token}|Present|Current|Now)\\b`,
+    "i"
+  );
+
+  const match = clean(value).match(pattern);
+
+  if (!match) {
+    return { startDate: "", endDate: "" };
+  }
+
+  return {
+    startDate: toMonthYear(match[1]),
+    endDate: toMonthYear(match[2])
+  };
+}
+
+
 function parseEducation(item) {
   const degreeText = clean(item.degree);
   const dateText = clean(item.date);
@@ -169,12 +239,20 @@ function parseEducation(item) {
       ? dateText
       : "");
 
-  return {
-    school: clean(item.school),
-    degree,
-    date,
-    gpa: gpa || (/^\d(?:\.\d+)?$/.test(gpaText) ? gpaText : "")
-  };
+  
+return {
+  school: clean(item.school),
+  location: "",
+  degree,
+  date,
+  ...structuredDates(date),
+  gpa:
+    gpa ||
+    (/^\d(?:\.\d+)?$/.test(gpaText)
+      ? gpaText
+      : "")
+};
+
 }
 
 function fallbackExperience(item) {
@@ -187,6 +265,12 @@ function fallbackExperience(item) {
     date: title.match(DATE_RE)?.[0] ||
       date.match(DATE_RE)?.[0] ||
       (date === title ? "" : date),
+    location: "",
+...structuredDates(
+  title.match(DATE_RE)?.[0] ||
+  date.match(DATE_RE)?.[0] ||
+  date
+),  
     description: (item.descriptions || []).map(clean).join("\n")
   };
 }
@@ -265,9 +349,9 @@ function parseExperience(text) {
     }
 
     return {
-      company,
-      jobTitle: header.title,
-      date: header.date,
+  company,
+  jobTitle: header.title,
+  date: header.date,
       description: description.map(formatLine).join("\n").trim()
     };
   });

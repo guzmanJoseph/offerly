@@ -10,6 +10,29 @@ const EXTRACT_JOB_URL =
 
 let scrapedData = null;
 let savedJobId = null;
+let savedJobTabId = null;
+
+function updateAppliedButton(status = "Saved") {
+  const button = document.getElementById("markAppliedBtn");
+  const hint = document.getElementById("appliedHint");
+
+  if (!button) return;
+
+  const isApplied = status === "Applied";
+
+  button.disabled = !savedJobId || isApplied;
+  button.classList.toggle("applied", isApplied);
+
+  button.textContent = isApplied
+    ? "✓ Application Tracked"
+    : "✓ Mark as Applied";
+
+  if (hint) {
+    hint.textContent = isApplied
+      ? "This application is marked Applied in Offerly."
+      : "Submit your application on the job website first. Then click here to track it.";
+  }
+}
 
 const el = (id) => document.getElementById(id);
 
@@ -258,12 +281,24 @@ async function saveDetectedJob(page) {
 
   const existing = await findExistingJob(url);
 
-  if (existing) {
-    savedJobId = existing.id;
-    setBadge(existing.status || "Already saved");
-    setStatus("This job is already in your Offerly dashboard.");
-    return;
-  }
+  
+if (existing) {
+  savedJobId = existing.id;
+  savedJobTabId = (await getCurrentTab())?.id ?? null;
+
+  setBadge(existing.status || "Already saved");
+
+  setStatus(
+    existing.status === "Applied"
+      ? "This application is already tracked as Applied."
+      : "This job is already in your Offerly dashboard."
+  );
+
+  updateAppliedButton(existing.status);
+
+  return;
+}
+
 
   const company = el("company").value.trim();
   const role = el("role").value.trim();
@@ -298,13 +333,20 @@ async function saveDetectedJob(page) {
     }),
   });
 
-  savedJobId = rows?.[0]?.id || null;
+  
+savedJobTabId = (await getCurrentTab())?.id ?? null;
+updateAppliedButton("Saved");
+setBadge("✓ Saved");
+setStatus("Job saved to Offerly. Ready to autofill?");
 
-  setBadge("✓ Saved");
-  setStatus("Job saved to Offerly. Ready to autofill?");
+await trackApplicationSubmission(savedJobId);
+
 }
 
 async function analyzeAndSaveCurrentPage() {
+  savedJobId = null;
+savedJobTabId = null;
+updateAppliedButton();
   const tab = await getCurrentTab();
 
   if (!tab?.id || !validJobUrl(tab.url)) {
@@ -344,6 +386,28 @@ if (!looksLikeJob) {
     "Open the specific job posting to save it."
   );
   return;
+}
+
+
+async function trackApplicationSubmission(jobId) {
+  if (!jobId) return;
+
+  const tab = await getCurrentTab();
+
+  if (!tab?.id) return;
+
+  const result = await chrome.runtime.sendMessage({
+    type: "OFFERLY_TRACK_APPLICATION",
+    tabId: tab.id,
+    jobId,
+  });
+
+  if (!result?.ok) {
+    console.info(
+      "Offerly submission tracking not enabled:",
+      result?.reason
+    );
+  }
 }
 
 await saveDetectedJob(scrapedData);
@@ -425,5 +489,132 @@ el("notNowBtn").addEventListener("click", () => {
     "No problem. Your job is saved if the badge says Saved."
   );
 });
+
+
+// -----------------------------------------
+// MANUAL MARK AS APPLIED
+// -----------------------------------------
+
+document
+  .getElementById("markAppliedBtn")
+  ?.addEventListener("click", async () => {
+    const button = document.getElementById("markAppliedBtn");
+
+    if (!savedJobId || !savedJobTabId) {
+      setStatus("Wait for Offerly to save this job first.");
+      return;
+    }
+
+    const activeTab = await getCurrentTab();
+
+    if (activeTab?.id !== savedJobTabId) {
+      setStatus(
+        "Switch back to the application tab and try again."
+      );
+      return;
+    }
+
+    const company =
+      document.getElementById("company")?.value || "this company";
+
+    const role =
+      document.getElementById("role")?.value || "this position";
+
+    const confirmed = window.confirm(
+      `Have you successfully submitted your application for ${role} at ${company}?\n\n` +
+      "Only continue if the employer's website confirmed your submission."
+    );
+
+    if (!confirmed) return;
+
+    // Capture the correct application before the request.
+    const jobId = savedJobId;
+
+    button.disabled = true;
+    button.textContent = "Updating application...";
+
+    try {
+      const session = await getValidSession();
+
+      const filters = new URLSearchParams({
+        id: `eq.${jobId}`,
+        user_id: `eq.${session.user.id}`,
+        status: "eq.Saved",
+      });
+
+      const updated = await authenticatedRequest(
+        `applications?${filters.toString()}`,
+        {
+          method: "PATCH",
+          headers: {
+            Prefer: "return=representation",
+          },
+          body: JSON.stringify({
+            status: "Applied",
+            date_applied: [
+  new Date().getFullYear(),
+  String(new Date().getMonth() + 1).padStart(2, "0"),
+  String(new Date().getDate()).padStart(2, "0"),
+].join("-"),
+          }),
+        }
+      );
+
+      // Guard against changing a job that was
+      // updated elsewhere or no longer exists.
+      if (!updated?.length) {
+        const query = new URLSearchParams({
+          select: "id,status",
+          id: `eq.${jobId}`,
+          user_id: `eq.${session.user.id}`,
+          limit: "1",
+        });
+
+        const current = await authenticatedRequest(
+          `applications?${query.toString()}`
+        );
+
+        if (current?.[0]?.status !== "Applied") {
+          throw new Error(
+            "The job was not updated. Refresh Offerly and try again."
+          );
+        }
+      }
+
+      if (savedJobId === jobId) {
+        setBadge("✓ Applied");
+
+        setStatus(
+          "Application successfully marked Applied!"
+        );
+
+        updateAppliedButton("Applied");
+
+        // Hide outdated autofill questions.
+        document
+          .getElementById("offerlyQuestionReview")
+          ?.remove();
+
+        // Hide the autofill prompt after tracking.
+        const autofill =
+          document.getElementById("autofillBtn");
+
+        if (autofill) {
+          autofill.disabled = true;
+          autofill.textContent = "✓ Application Tracked";
+        }
+      }
+    } catch (error) {
+      console.error("Offerly mark applied:", error);
+
+      setStatus(
+        error.message || "Could not update application."
+      );
+
+      if (savedJobId === jobId) {
+        updateAppliedButton("Saved");
+      }
+    }
+  });
 
 // Autofill button is handled by profileAutofill.js.

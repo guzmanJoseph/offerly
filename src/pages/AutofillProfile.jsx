@@ -26,6 +26,8 @@ const emptyProfile = () => ({
   email: "",
   phone: "",
   location: "",
+  country: "",
+  phoneCountry: "",
   linkedin: "",
   github: "",
   website: "",
@@ -38,18 +40,25 @@ const emptyProfile = () => ({
   ...DEFAULT_APPLICATION_ANSWERS
 });
 
+
 const EDUCATION_FIELDS = [
-  ["School", "school"],
+  ["School or University", "school"],
+  ["School location", "location"],
   ["Degree / major", "degree"],
-  ["Dates / graduation", "date"],
-  ["GPA (optional)", "gpa"]
+  ["Start date (MM/YYYY)", "startDate"],
+  ["End date (MM/YYYY)", "endDate"],
+  ["GPA (optional)", "gpa"],
+  ["Original resume dates (reference)", "date"],
 ];
 
 const EXPERIENCE_FIELDS = [
   ["Company", "company"],
+  ["Company location", "location"],
   ["Job title", "jobTitle"],
-  ["Dates", "date"],
-  ["Description", "description", true]
+  ["Start date (MM/YYYY)", "startDate"],
+  ["End date (MM/YYYY)", "endDate"],
+  ["Original resume dates (reference)", "date"],
+  ["Description", "description", true],
 ];
 
 const PROJECT_FIELDS = [
@@ -318,6 +327,8 @@ function handleResumeProfileCleared(result) {
             ["Email", "email"],
             ["Phone", "phone"],
             ["City / state", "location"],
+            ["Country of residence", "country"],
+            ["Phone country (e.g. United States)", "phoneCountry"],
             ["LinkedIn", "linkedin"],
             ["GitHub", "github"],
             ["Portfolio / website", "website"]
@@ -345,14 +356,19 @@ function handleResumeProfileCleared(result) {
         entries={profile.education}
         fields={EDUCATION_FIELDS}
         needsReview={parsed}
-        onAdd={() =>
-          addItem("education", {
-            school: "",
-            degree: "",
-            date: "",
-            gpa: ""
-          })
-        }
+        
+onAdd={() =>
+  addItem("education", {
+    school: "",
+    location: "",
+    degree: "",
+    startDate: "",
+    endDate: "",
+    date: "",
+    gpa: ""
+  })
+}
+
         onUpdate={(index, name, value) =>
           updateItem("education", index, name, value)
         }
@@ -368,14 +384,19 @@ function handleResumeProfileCleared(result) {
         entries={profile.experience}
         fields={EXPERIENCE_FIELDS}
         needsReview={parsed}
-        onAdd={() =>
-          addItem("experience", {
-            company: "",
-            jobTitle: "",
-            date: "",
-            description: ""
-          })
-        }
+       
+onAdd={() =>
+  addItem("experience", {
+    company: "",
+    location: "",
+    jobTitle: "",
+    startDate: "",
+    endDate: "",
+    date: "",
+    description: ""
+  })
+}
+
         onUpdate={(index, name, value) =>
           updateItem("experience", index, name, value)
         }

@@ -97,24 +97,44 @@ window.offerlySmartAnswers = (() => {
     return String(values[key] || "").trim();
   }
 
-  function matchOption(options, saved) {
-    if (!saved || !Array.isArray(options)) {
-      return null;
-    }
+  
+function matchOption(options, saved) {
+  if (!saved || !Array.isArray(options)) {
+    return null;
+  }
 
-    const desired = normalize(saved);
+  const desired = normalize(saved);
 
-    const matches = options.filter((option) =>
-      (
-        normalize(option.label) === desired ||
-        normalize(option.value) === desired
-      )
+  // First try an exact match.
+  const exact = options.filter((option) =>
+    normalize(option.label) === desired ||
+    normalize(option.value) === desired
+  );
+
+  if (exact.length === 1) return exact[0];
+  if (exact.length > 1) return null;
+
+  // Phone-country dropdowns may display a country
+  // followed by its calling code, e.g.
+  // "United States +1" instead of "United States".
+  const dialingMatches = options.filter((option) => {
+    const label = String(option.label || "").trim();
+
+    const match = label.match(
+      /^(.+?)\s+\+\d{1,4}\s*$/
     );
 
-    return matches.length === 1
-      ? matches[0]
-      : null;
-  }
+    return (
+      match &&
+      normalize(match[1]) === desired
+    );
+  });
+
+  return dialingMatches.length === 1
+    ? dialingMatches[0]
+    : null;
+}
+
 
   async function apply({
     fields,
@@ -148,11 +168,19 @@ window.offerlySmartAnswers = (() => {
 
       if (!key) continue;
 
-      const saved = savedAnswer(
-        key,
-        profile,
-        selfId
-      );
+      let saved = savedAnswer(
+  key,
+  profile,
+  selfId
+);
+
+if (key === "country" && !saved) {
+  saved = savedAnswer(
+    "phoneCountry",
+    profile,
+    selfId
+  );
+}
 
       if (!saved) continue;
 
@@ -198,6 +226,30 @@ window.offerlySmartAnswers = (() => {
 
           options = opened.options || [];
         }
+
+        // A dropdown containing international calling codes
+// should use the saved phone country, not residence.
+if (
+  key === "country" &&
+  options.some((option) =>
+    /\+\d{1,4}\s*$/.test(
+      String(option.label || "").trim()
+    )
+  )
+) {
+  saved = savedAnswer(
+    "phoneCountry",
+    profile,
+    selfId
+  );
+}
+
+if (!saved) {
+  result.skipped.push(
+    `${field.label}: phone country not saved`
+  );
+  continue;
+}
 
         const option = matchOption(
           options,
