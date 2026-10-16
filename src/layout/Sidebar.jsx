@@ -9,6 +9,7 @@ const navigationItems = [
   { to: "/gmail-import", label: "Gmail Sync" },
   { to: "/calendar", label: "Calendar" },
   { to: "/networking", label: "Networking" },
+  { to: "/autofill-profile", label: "Autofill Profile" },
   { to: "/settings", label: "Settings" },
 ];
 

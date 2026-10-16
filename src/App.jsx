@@ -11,6 +11,7 @@ import Auth from "./pages/Auth";
 import CalendarPage from "./pages/Calendar";
 import Networking from "./pages/Networking";
 import Settings from "./pages/Settings";
+import AutofillProfile from "./pages/AutofillProfile";
 import ImportGmail from "./pages/ImportGmail";
 import Privacy from "./pages/Privacy";
 import Home from "./pages/Home";
@@ -156,6 +157,17 @@ export default function App() {
           <ProtectedRoute session={session}>
             <Layout>
               <Settings user={session?.user} />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/autofill-profile"
+        element={
+          <ProtectedRoute session={session}>
+            <Layout>
+              <AutofillProfile />
             </Layout>
           </ProtectedRoute>
         }

@@ -1,56 +1,157 @@
-const SUPABASE_URL = "https://cezdzqaayzlalspukapl.supabase.co";
-const SUPABASE_ANON_KEY = "sb_publishable_IT1rTAKqu7oUP9oILUIyaQ_fm_DOAir";
+
+const SUPABASE_URL =
+  "https://cezdzqaayzlalspukapl.supabase.co";
+
+const SUPABASE_ANON_KEY =
+  "sb_publishable_IT1rTAKqu7oUP9oILUIyaQ_fm_DOAir";
 
 const EXTRACT_JOB_URL =
-  "https://cezdzqaayzlalspukapl.supabase.co/functions/v1/extract-job";
+  `${SUPABASE_URL}/functions/v1/extract-job`;
 
 let scrapedData = null;
+let savedJobId = null;
+
+const el = (id) => document.getElementById(id);
+
+function setStatus(message) {
+  el("status").textContent = message;
+}
+
+function setBadge(message) {
+  el("saveBadge").textContent = message;
+}
 
 async function getCurrentTab() {
-  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  const [tab] = await chrome.tabs.query({
+    active: true,
+    currentWindow: true,
+  });
   return tab;
 }
 
 async function getStoredSession() {
-  const data = await chrome.storage.local.get(["offerlySession"]);
+  const data = await chrome.storage.local.get(
+    "offerlySession"
+  );
   return data.offerlySession || null;
 }
 
 async function setStoredSession(session) {
-  await chrome.storage.local.set({ offerlySession: session });
+  await chrome.storage.local.set({
+    offerlySession: session,
+  });
 }
 
 async function clearStoredSession() {
-  await chrome.storage.local.remove(["offerlySession"]);
+  await chrome.storage.local.remove("offerlySession");
 }
 
 function showLoginView() {
-  document.getElementById("loginView").classList.remove("hidden");
-  document.getElementById("saveView").classList.add("hidden");
+  el("loginView").classList.remove("hidden");
+  el("saveView").classList.add("hidden");
 }
 
 function showSaveView() {
-  document.getElementById("loginView").classList.add("hidden");
-  document.getElementById("saveView").classList.remove("hidden");
+  el("loginView").classList.add("hidden");
+  el("saveView").classList.remove("hidden");
 }
 
 async function loginWithEmailPassword(email, password) {
-  const response = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
-    method: "POST",
-    headers: {
-      apikey: SUPABASE_ANON_KEY,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ email, password }),
-  });
+  const response = await fetch(
+    `${SUPABASE_URL}/auth/v1/token?grant_type=password`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password }),
+    }
+  );
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error_description || data.msg || "Login failed");
+    throw new Error(
+      data.error_description ||
+      data.msg ||
+      "Login failed."
+    );
   }
 
   return data;
+}
+
+async function getValidSession() {
+  let session = await getStoredSession();
+
+  if (!session?.access_token) {
+    throw new Error("Please log in first.");
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+
+  if (session.expires_at && session.expires_at > now + 60) {
+    return session;
+  }
+
+  if (!session.refresh_token) {
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  const response = await fetch(
+    `${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`,
+    {
+      method: "POST",
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        refresh_token: session.refresh_token,
+      }),
+    }
+  );
+
+  const refreshed = await response.json();
+
+  if (!response.ok || !refreshed.access_token) {
+    throw new Error("Session expired. Please log in again.");
+  }
+
+  session = refreshed;
+  await setStoredSession(session);
+
+  return session;
+}
+
+async function authenticatedRequest(path, options = {}) {
+  const session = await getValidSession();
+
+  const response = await fetch(
+    `${SUPABASE_URL}/rest/v1/${path}`,
+    {
+      ...options,
+      headers: {
+        apikey: SUPABASE_ANON_KEY,
+        Authorization: `Bearer ${session.access_token}`,
+        "Content-Type": "application/json",
+        ...options.headers,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const details = await response.text();
+    throw new Error(
+      `Supabase request failed (${response.status}): ${details}`
+    );
+  }
+
+  if (response.status === 204) return null;
+
+  const content = await response.text();
+  return content ? JSON.parse(content) : null;
 }
 
 async function scrapeJobPage(tabId) {
@@ -67,140 +168,262 @@ async function scrapeJobPage(tabId) {
   return result;
 }
 
-async function extractJobWithAI(data) {
+async function extractJobWithAI(page) {
+  const session = await getValidSession();
+
   const response = await fetch(EXTRACT_JOB_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "extract", ...data }),
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${session.access_token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: "extract",
+      ...page,
+    }),
   });
 
   if (!response.ok) {
-    console.error("Extract failed:", await response.text());
-    return {};
+    throw new Error("Could not extract job details.");
   }
 
-  return await response.json();
+  return response.json();
 }
 
-async function analyzeCurrentPage() {
-  const status = document.getElementById("status");
+function validJobUrl(url) {
+  try {
+    const parsed = new URL(url);
+
+    return (
+      ["https:", "http:"].includes(parsed.protocol) &&
+      !["localhost", "127.0.0.1"].includes(parsed.hostname) &&
+      !parsed.hostname.endsWith("offerlyjob.com")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function normalizeJobUrl(url) {
+  const parsed = new URL(url);
+  parsed.hash = "";
+
+  // Remove common tracking parameters but keep
+  // other parameters that may identify the job.
+  for (const key of [...parsed.searchParams.keys()]) {
+    if (
+      key.toLowerCase().startsWith("utm_") ||
+      ["fbclid", "gclid"].includes(key.toLowerCase())
+    ) {
+      parsed.searchParams.delete(key);
+    }
+  }
+
+  return parsed.toString();
+}
+
+function displayJob(page, extracted) {
+  el("company").value = extracted.company || "";
+  el("role").value =
+    extracted.role || page.h1 || page.title || "";
+  el("location").value = extracted.location || "";
+
+  if (validJobUrl(page.url)) {
+    el("jobLink").href = page.url;
+    el("jobLink").classList.remove("hidden");
+  }
+}
+
+async function findExistingJob(url) {
+  const session = await getValidSession();
+
+  const query = new URLSearchParams({
+    select: "id,status",
+    user_id: `eq.${session.user.id}`,
+    job_url: `eq.${url}`,
+    limit: "1",
+  });
+
+  const rows = await authenticatedRequest(
+    `applications?${query.toString()}`
+  );
+
+  return rows?.[0] || null;
+}
+
+async function saveDetectedJob(page) {
+  const session = await getValidSession();
+  const url = normalizeJobUrl(page.url);
+
+  const existing = await findExistingJob(url);
+
+  if (existing) {
+    savedJobId = existing.id;
+    setBadge(existing.status || "Already saved");
+    setStatus("This job is already in your Offerly dashboard.");
+    return;
+  }
+
+  const company = el("company").value.trim();
+  const role = el("role").value.trim();
+  const location = el("location").value.trim();
+
+  // Avoid saving pages that lack basic job details.
+  if (!company || !role) {
+    setBadge("Review needed");
+    setStatus(
+      "Couldn't identify the company and role. This job wasn't saved."
+    );
+    return;
+  }
+
+  setBadge("Saving...");
+
+  const rows = await authenticatedRequest("applications", {
+    method: "POST",
+    headers: {
+      Prefer: "return=representation",
+    },
+    body: JSON.stringify({
+      user_id: session.user.id,
+      company,
+      role,
+      location,
+      job_url: url,
+      status: "Saved",
+      date_applied: null,
+      priority: "Medium",
+      notes: "",
+    }),
+  });
+
+  savedJobId = rows?.[0]?.id || null;
+
+  setBadge("✓ Saved");
+  setStatus("Job saved to Offerly. Ready to autofill?");
+}
+
+async function analyzeAndSaveCurrentPage() {
   const tab = await getCurrentTab();
 
-  status.textContent = "Analyzing job page...";
+  if (!tab?.id || !validJobUrl(tab.url)) {
+    setBadge("No job detected");
+    setStatus("Open a job application webpage first.");
+    return;
+  }
+
+  setBadge("Analyzing...");
+  setStatus("Detecting job details...");
 
   scrapedData = await scrapeJobPage(tab.id);
+
+  if (!validJobUrl(scrapedData.url)) {
+    throw new Error("This isn't a supported job page.");
+  }
+
+  // Prevent saving a job again if the same normalized
+  // URL already exists. The AI call is still used to
+  // populate the details card.
   const extracted = await extractJobWithAI(scrapedData);
 
-  document.getElementById("company").value = extracted.company || "";
-  document.getElementById("role").value =
-    extracted.role || scrapedData.h1 || scrapedData.title || "";
-  document.getElementById("location").value = extracted.location || "";
+  displayJob(scrapedData, extracted);
 
-  status.textContent = "Ready to save.";
+const looksLikeJob =
+  /\/(jobs?|careers?|positions?|apply|applications?)\b/i.test(
+    new URL(scrapedData.url).pathname
+  ) ||
+  /greenhouse\.io|lever\.co|myworkdayjobs\.com|ashbyhq\.com/i.test(
+    new URL(scrapedData.url).hostname
+  );
+
+if (!looksLikeJob) {
+  setBadge("Review needed");
+  setStatus(
+    "Job details detected, but this page wasn't auto-saved. " +
+    "Open the specific job posting to save it."
+  );
+  return;
 }
 
-async function saveJobToOfferly() {
-  const status = document.getElementById("status");
-  const saveBtn = document.getElementById("saveBtn");
+await saveDetectedJob(scrapedData);
+}
 
+async function initializePopup() {
   try {
-    status.textContent = "Saving to Offerly...";
-    saveBtn.disabled = true;
-
     const session = await getStoredSession();
 
-    if (!session?.user?.id) {
-      status.textContent = "Please log in first.";
-      saveBtn.disabled = false;
+    if (!session?.access_token) {
       showLoginView();
       return;
     }
 
-    const tab = await getCurrentTab();
+    await getValidSession();
+    showSaveView();
+    await analyzeAndSaveCurrentPage();
+  } catch (error) {
+    console.error("Offerly initialization:", error);
 
-    const payload = {
-      action: "save",
-      userId: session.user.id,
-      url: tab.url,
-      title: scrapedData?.title || "",
-      h1: scrapedData?.h1 || "",
-      pageText: scrapedData?.pageText || "",
-      company: document.getElementById("company").value,
-      role: document.getElementById("role").value,
-      location: document.getElementById("location").value,
-    };
-
-    const response = await fetch(EXTRACT_JOB_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || result.error) {
-      console.error("Save failed:", result);
-      status.textContent = "Save failed.";
-      saveBtn.disabled = false;
+    if (error.message.includes("Session expired")) {
+      await clearStoredSession();
+      showLoginView();
+      el("loginStatus").textContent = error.message;
       return;
     }
 
-    status.textContent = "Saved to Offerly ✓";
-    saveBtn.textContent = "Saved";
-  } catch (error) {
-    console.error(error);
-    status.textContent = "Save failed.";
-    saveBtn.disabled = false;
+    showSaveView();
+    setBadge("Error");
+    setStatus(error.message);
   }
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
-  const session = await getStoredSession();
+document.addEventListener(
+  "DOMContentLoaded",
+  initializePopup
+);
 
-  if (!session?.user?.id) {
-    showLoginView();
-    return;
-  }
-
-  showSaveView();
-
-  try {
-    await analyzeCurrentPage();
-  } catch (error) {
-    console.error(error);
-    document.getElementById("status").textContent =
-      "Could not analyze this page.";
-  }
-});
-
-document.getElementById("loginBtn").addEventListener("click", async () => {
-  const email = document.getElementById("emailInput").value.trim();
-  const password = document.getElementById("passwordInput").value;
-  const loginStatus = document.getElementById("loginStatus");
+el("loginBtn").addEventListener("click", async () => {
+  const email = el("emailInput").value.trim();
+  const password = el("passwordInput").value;
+  const button = el("loginBtn");
 
   if (!email || !password) {
-    loginStatus.textContent = "Enter email and password.";
+    el("loginStatus").textContent =
+      "Enter your email and password.";
     return;
   }
 
+  button.disabled = true;
+  el("loginStatus").textContent = "Logging in...";
+
   try {
-    loginStatus.textContent = "Logging in...";
+    const session = await loginWithEmailPassword(
+      email,
+      password
+    );
 
-    const session = await loginWithEmailPassword(email, password);
     await setStoredSession(session);
+    el("loginStatus").textContent = "";
 
-    loginStatus.textContent = "";
     showSaveView();
-    await analyzeCurrentPage();
+    await analyzeAndSaveCurrentPage();
   } catch (error) {
     console.error(error);
-    loginStatus.textContent = error.message;
+    el("loginStatus").textContent = error.message;
+  } finally {
+    button.disabled = false;
   }
 });
 
-document.getElementById("logoutBtn").addEventListener("click", async () => {
+el("logoutBtn").addEventListener("click", async () => {
   await clearStoredSession();
   showLoginView();
 });
 
-document.getElementById("saveBtn").addEventListener("click", saveJobToOfferly);
+el("notNowBtn").addEventListener("click", () => {
+  setStatus(
+    "No problem. Your job is saved if the badge says Saved."
+  );
+});
+
+// Autofill button is handled by profileAutofill.js.

@@ -1,0 +1,308 @@
+/* Autofill Profile */
+.af-page { max-width: 1100px; margin: 0 auto; padding-bottom: 48px; }
+.af-card { padding: 24px; background: var(--card-bg, #191919); color: inherit; border: 1px solid var(--border-color, #363636); border-radius: 15px; margin: 18px 0; }
+.af-card h2 { font-size: 1.12rem; margin: 0 0 14px; }
+.af-muted { opacity: .75; font-size: .92rem; line-height: 1.5; }
+.af-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.af-field { display: flex; flex-direction: column; gap: 7px; min-width: 0; font-size: .9rem; }
+.af-field input, .af-field textarea { box-sizing: border-box; width: 100%; background: var(--input-bg, #252525); color: inherit; border: 1px solid var(--border-color, #414141); border-radius: 8px; padding: 11px 12px; font: inherit; }
+.af-field textarea { resize: vertical; }
+.af-section-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+.af-section-head h2 { margin: 0; }
+.af-secondary, .af-upload-label { display: inline-flex; align-items: center; border: 1px solid #8b5cf6; border-radius: 8px; padding: 10px 15px; background: #6843ae; color: white; cursor: pointer; font: inherit; font-size: .9rem; }
+.af-upload-label input { display: none; }
+.af-entry { border-top: 1px solid #4446; padding: 16px 0; }
+.af-danger { background: transparent; color: #efa6a6; border: 0; cursor: pointer; margin-top: 8px; padding: 6px 0; }
+.af-status { margin-top: 12px; padding: 12px; border: 1px solid #7775; border-radius: 8px; }
+@media (max-width: 700px) { .af-grid { grid-template-columns: 1fr; } .af-section-head { align-items: flex-start; flex-direction: column; } .af-card { padding: 16px; } }
+
+/* Autofill application question dropdowns */
+
+.af-field select {
+  width: 100%;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid #404040;
+  border-radius: 8px;
+  background: #242424;
+  color: #f5f5f5;
+  font: inherit;
+  cursor: pointer;
+  color-scheme: dark;
+}
+
+.af-field select:focus {
+  outline: 2px solid #8b5cf6;
+  outline-offset: 1px;
+}
+
+.af-field select option {
+  background: #242424;
+  color: #ffffff;
+}
+
+.af-field select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+
+/* Resume manager */
+
+.resume-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.resume-manager-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #393939;
+  border-radius: 10px;
+  background: #222222;
+}
+
+.resume-manager-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.resume-manager-info strong {
+  overflow-wrap: anywhere;
+}
+
+.resume-manager-info small {
+  color: #a1a1aa;
+}
+
+.resume-manager-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resume-manager-actions button {
+  white-space: nowrap;
+}
+
+@media (max-width: 650px) {
+  .resume-manager-item {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .resume-manager-actions {
+    flex-wrap: wrap;
+  }
+}
+
+
+/* Default resume */
+
+.resume-manager-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.resume-default-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  background: rgba(167, 139, 250, 0.13);
+  color: #c4b5fd;
+  border: 1px solid rgba(167, 139, 250, 0.3);
+}
+
+.resume-manager-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Resume preview */
+
+.resume-preview-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, 0.82);
+}
+
+.resume-preview-modal {
+  width: min(980px, 100%);
+  height: min(90vh, 900px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #414141;
+  border-radius: 14px;
+  background: #181818;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+.resume-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 24px;
+  border-bottom: 1px solid #393939;
+}
+
+.resume-preview-header h2 {
+  margin: 0 0 4px;
+  font-size: 20px;
+}
+
+.resume-preview-header p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.resume-preview-content {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  background: #ffffff;
+}
+
+.resume-preview-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.resume-preview-text {
+  margin: 0;
+  padding: 32px;
+  color: #222222;
+  background: #ffffff;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+@media (max-width: 650px) {
+  .resume-preview-overlay {
+    padding: 8px;
+  }
+
+  .resume-preview-modal {
+    height: 95vh;
+    border-radius: 10px;
+  }
+
+  .resume-preview-header {
+    padding: 14px;
+  }
+
+  .resume-manager-actions {
+    width: 100%;
+  }
+}
+
+
+/* Voluntary Self-Identification */
+
+.self-id-section {
+  margin-top: 24px;
+}
+
+.self-id-question {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  margin-top: 22px;
+}
+
+.self-id-question > label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.self-id-question select {
+  width: 100%;
+  max-width: 480px;
+  padding: 12px;
+  border-radius: 9px;
+  border: 1px solid #444;
+  background: #222;
+  color: white;
+  font: inherit;
+}
+
+.self-id-checkboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.self-id-checkboxes label,
+.self-id-consent label {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.self-id-checkboxes input,
+.self-id-consent input {
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.self-id-consent {
+  padding: 16px;
+  border: 1px solid #444;
+  border-radius: 10px;
+  margin-top: 28px;
+}
+
+.self-id-consent p {
+  margin: 10px 0 0 26px;
+}
+
+.self-id-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+}
+
+.self-id-actions button {
+  width: auto;
+  padding: 12px 18px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.self-id-delete {
+  border: 1px solid #666;
+  background: transparent;
+  color: inherit;
+}
