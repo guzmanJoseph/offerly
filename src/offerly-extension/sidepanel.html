@@ -1,0 +1,192 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1"
+  />
+  <title>Offerly — AI Job Assistant</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <img src="offerly.png" alt="" class="logo" />
+        </div>
+
+        <div class="brand-copy">
+          <h1>Offerly</h1>
+          <p>AI Job Assistant</p>
+        </div>
+      </div>
+
+      <div class="header-tag">
+        <span class="live-dot"></span>
+        Ready
+      </div>
+    </header>
+
+    <main class="panel-content">
+
+      <section id="loginView" class="panel-card">
+        <div class="section-heading">
+          <div class="section-icon">↗</div>
+          <div>
+            <h2>Welcome back</h2>
+            <p>Connect your account to get started.</p>
+          </div>
+        </div>
+
+        <label for="emailInput">Email address</label>
+        <input
+          id="emailInput"
+          type="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+        />
+
+        <label for="passwordInput">Password</label>
+        <input
+          id="passwordInput"
+          type="password"
+          placeholder="Enter your password"
+          autocomplete="current-password"
+        />
+
+        <button id="loginBtn" type="button" class="primary-button">
+          Log in to Offerly
+        </button>
+
+        <p id="loginStatus" role="status"></p>
+      </section>
+
+      <section id="saveView" class="hidden">
+
+        <div class="eyebrow">
+          <span class="live-dot"></span>
+          ACTIVE APPLICATION
+        </div>
+
+        <section class="panel-card job-card">
+          <div class="card-topline">
+            <h2>Detected job</h2>
+            <span id="saveBadge" class="save-badge">
+              Checking...
+            </span>
+          </div>
+
+          <label for="company">Company</label>
+          <input
+            id="company"
+            type="text"
+            placeholder="Detecting company..."
+          />
+
+          <label for="role">Position</label>
+          <input
+            id="role"
+            type="text"
+            placeholder="Detecting position..."
+          />
+
+          <label for="location">Location</label>
+          <input
+            id="location"
+            type="text"
+            placeholder="Detecting location..."
+          />
+
+          <a
+            id="jobLink"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="job-link hidden"
+          >
+            View job posting
+            <span aria-hidden="true">↗</span>
+          </a>
+        </section>
+
+        <section class="panel-card autofill-card">
+          <div class="feature-icon">✦</div>
+
+          <h2>Apply smarter.</h2>
+
+          <p>
+            Let Offerly fill this application using
+            your saved profile and AI.
+          </p>
+
+          <button
+            id="autofillBtn"
+            type="button"
+            class="primary-button"
+          >
+            ✦ Autofill Application
+          </button>
+
+          <p class="safety-note">
+            You review everything before submitting.
+          </p>
+
+          <button
+            id="markAppliedBtn"
+            type="button"
+            class="mark-applied-btn"
+            disabled
+          >
+            ✓ Mark as Applied
+          </button>
+
+          <p id="appliedHint" class="applied-hint">
+            Submit on the employer's website first,
+            then mark your application as applied.
+          </p>
+
+          <button
+            id="notNowBtn"
+            type="button"
+            class="secondary-btn"
+          >
+            Not now
+          </button>
+        </section>
+
+        <div id="status" role="status"></div>
+
+        <div class="panel-footer">
+          <div class="footer-topline">
+            <span>Connected to Offerly</span>
+            <span class="connection-indicator">
+              <span class="live-dot"></span>
+              Active
+            </span>
+          </div>
+
+          <button
+            id="logoutBtn"
+            type="button"
+            class="secondary-btn"
+          >
+            Disconnect account
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="popup.js"></script>
+  <script src="dropdownDriver.js"></script>
+  <script src="smartAnswers.js"></script>
+  <script src="aiAgent.js"></script>
+  <script src="profileAutofill.js"></script>
+  <script src="formSync.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

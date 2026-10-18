@@ -2,19 +2,19 @@
 /*
  * Offerly Autofill Controller
  *
- * Requires:
- * popup.js
- * dropdownDriver.js
- * smartAnswers.js
- *
- * Keeps:
- * - Existing account authentication
+ * Original functionality:
+ * - Supabase authentication
  * - Personal information autofill
+ * - Saved dropdown answers
  * - Default resume attachment
- * - Automatic dropdown answers
- * - Compact list of unanswered questions
+ * - Needs Attention review
  *
- * Never submits a job application.
+ * Additional functionality:
+ * - Universal form controls
+ * - Optional calendar driver
+ * - OpenAI-assisted answer matching
+ *
+ * Never submits job applications.
  */
 
 (() => {
@@ -26,28 +26,36 @@
 
   const $ = (id) => document.getElementById(id);
 
-  let activeTabId = null;
-
   const normalize = (value) =>
     String(value ?? "")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
 
+  let activeTabId = null;
+
   function status(message) {
     const element = $("status");
-    if (element) element.textContent = message;
+
+    if (element) {
+      element.textContent = message;
+    }
   }
 
-  // ------------------------------------
+  // ---------------------------------------
   // SUPABASE
-  // ------------------------------------
+  // ---------------------------------------
 
   async function getRow(table, columns) {
     const session = await getValidSession();
 
-    if (!session?.user?.id) {
-      throw new Error("Please log in first.");
+    if (
+      !session?.user?.id ||
+      !session.access_token
+    ) {
+      throw new Error(
+        "Please log in to Offerly first."
+      );
     }
 
     const params = new URLSearchParams({
@@ -109,12 +117,11 @@
       };
     } catch (error) {
       console.warn(
-        "Could not load voluntary answer preferences:",
+        "Offerly self-identification preferences:",
         error
       );
 
-      // Fail closed: never autofill voluntary
-      // disclosures if consent can't be loaded.
+      // Fail closed for sensitive answers.
       return {
         answers: {},
         allowSuggestions: false,
@@ -123,9 +130,9 @@
     }
   }
 
-  // ------------------------------------
+  // ---------------------------------------
   // APPLICATION ENGINE
-  // ------------------------------------
+  // ---------------------------------------
 
   async function prepareEngine() {
     const [tab] = await chrome.tabs.query({
@@ -147,38 +154,102 @@
     await chrome.scripting.executeScript({
       target: { tabId: activeTabId },
       files: ["formEngine.js"],
+      world: "ISOLATED",
     });
+
+    const results =
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTabId },
+        world: "ISOLATED",
+
+        func: () => ({
+          ready:
+            typeof globalThis.offerlyEngine
+              ?.scan === "function",
+          methods: Object.keys(
+            globalThis.offerlyEngine || {}
+          ),
+        }),
+      });
+
+    const check = results?.[0]?.result;
+
+    console.info(
+      "Offerly form engine:",
+      check
+    );
+
+    if (!check?.ready) {
+      throw new Error(
+        "Offerly form engine did not initialize."
+      );
+    }
   }
 
   async function callPageEngine(method, ...args) {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: activeTabId },
+    const results =
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTabId },
+        world: "ISOLATED",
 
-      func: async (methodName, parameters) => {
-        const engine = globalThis.offerlyEngine;
-        const fn = engine?.[methodName];
+        func: async (methodName, parameters) => {
+          const engine =
+            globalThis.offerlyEngine;
 
-        if (typeof fn !== "function") {
-          throw new Error(
-            `Form engine method missing: ${methodName}`
-          );
-        }
+          const fn = engine?.[methodName];
 
-        return await fn(...parameters);
-      },
+          if (typeof fn !== "function") {
+            return {
+              __offerlyError:
+                `Missing engine method: ${methodName}`,
+            };
+          }
 
-      args: [method, args],
-    });
+          try {
+            const result =
+              await fn(...parameters);
 
-    return results?.[0]?.result;
+            return result === undefined
+              ? {
+                  __offerlyError:
+                    `${methodName} returned undefined`,
+                }
+              : result;
+          } catch (error) {
+            return {
+              __offerlyError:
+                error?.message || String(error),
+            };
+          }
+        },
+
+        args: [method, args],
+      });
+
+    const result = results?.[0]?.result;
+
+    if (result?.__offerlyError) {
+      throw new Error(result.__offerlyError);
+    }
+
+    if (result === null || result === undefined) {
+      throw new Error(
+        `${method} returned no result.`
+      );
+    }
+
+    return result;
   }
 
   async function runEngine(method, ...args) {
     if (!activeTabId) {
-      throw new Error("No active application tab.");
+      throw new Error(
+        "No active application tab."
+      );
     }
 
-    const driver = window.offerlyDropdownDriver;
+    const driver =
+      window.offerlyDropdownDriver;
 
     if (
       driver &&
@@ -187,142 +258,217 @@
         method === "fillAnswer"
       )
     ) {
-      const fieldId = args[0];
+      const fields =
+        await callPageEngine("scan");
 
-      const fields = await callPageEngine("scan");
-
-      const field = fields.find(
-        (item) => item.id === fieldId
-      );
+      const field = Array.isArray(fields)
+        ? fields.find(
+            (item) => item.id === args[0]
+          )
+        : null;
 
       if (field?.type === "custom") {
-        if (method === "getDropdownOptions") {
-          return driver.openAndRead(
-            activeTabId,
-            fieldId
-          );
-        }
-
-        return driver.fill(
-          activeTabId,
-          fieldId,
-          args[1]
-        );
+        return method === "getDropdownOptions"
+          ? driver.openAndRead(
+              activeTabId,
+              args[0]
+            )
+          : driver.fill(
+              activeTabId,
+              args[0],
+              args[1]
+            );
       }
     }
 
     return callPageEngine(method, ...args);
   }
 
-  async function scanFields() {
-    const fields = await runEngine("scan");
+  async function safeScan() {
+    try {
+      const fields = await runEngine("scan");
 
-    if (!Array.isArray(fields)) {
-      throw new Error(
-        "Application scan failed. Reload Offerly."
-      );
-    }
-
-    return fields;
-  }
-
-  // ------------------------------------
-  // COMPACT MANUAL REVIEW
-  // ------------------------------------
-
-  function needsAttention(field) {
-    if (
-      !field ||
-      field.type === "file" ||
-      field.type === "choice" ||
-      String(field.value || "").trim()
-    ) {
-      return false;
-    }
-
-    const label = normalize(field.label);
-
-    if (
-      !label ||
-      label === "search" ||
-      label === "off" ||
-      label.startsWith("search off") ||
-      label.startsWith("field ") ||
-      label.startsWith("react select")
-    ) {
-      return false;
-    }
-
-    return Boolean(
-      field.required ||
-      field.sensitive ||
-      field.employmentQuestion ||
-      field.type === "select" ||
-      field.type === "custom"
-    );
-  }
-
-  function showCompactNeedsAttention(fields) {
-    $("offerlyQuestionReview")?.remove();
-
-    const missing = fields.filter(needsAttention);
-
-    const section = document.createElement("section");
-    section.id = "offerlyQuestionReview";
-    section.className = "offerly-review";
-
-    const heading = document.createElement("h3");
-
-    heading.textContent = missing.length
-      ? `Needs your attention (${missing.length})`
-      : "Autofill review";
-
-    section.appendChild(heading);
-
-    const message = document.createElement("p");
-
-    message.textContent = missing.length
-      ? "Complete these fields directly on the application:"
-      : "No remaining recognized questions were detected. Review the entire application before submitting.";
-
-    section.appendChild(message);
-
-    if (missing.length) {
-      const list = document.createElement("ul");
-      list.className = "offerly-missing-list";
-
-      const seen = new Set();
-
-      for (const field of missing) {
-        const key = normalize(field.label);
-
-        if (seen.has(key)) continue;
-        seen.add(key);
-
-        const item = document.createElement("li");
-
-        item.textContent = field.label;
-        list.appendChild(item);
+      if (!Array.isArray(fields)) {
+        throw new Error(
+          "Form scanner returned an invalid result."
+        );
       }
 
-      section.appendChild(list);
-    }
-
-    const button = $("autofillBtn");
-
-    if (button) {
-      button.insertAdjacentElement(
-        "afterend",
-        section
+      return {
+        ok: true,
+        fields,
+      };
+    } catch (error) {
+      console.warn(
+        "Offerly question scan failed:",
+        error
       );
-    }
 
-    return missing.length;
+      return {
+        ok: false,
+        fields: [],
+      };
+    }
   }
 
-  // ------------------------------------
+  // ---------------------------------------
+  // OPTIONAL PAGE ENGINE
+  // ---------------------------------------
+
+  async function runAdditionalEngine(
+    filename,
+    globalName,
+    profile,
+    selfId
+  ) {
+    const fallback = {
+      filled: 0,
+      skipped: 0,
+      failed: [],
+    };
+
+    try {
+      await chrome.scripting.executeScript({
+        target: { tabId: activeTabId },
+        files: [filename],
+        world: "ISOLATED",
+      });
+
+      const results =
+        await chrome.scripting.executeScript({
+          target: { tabId: activeTabId },
+          world: "ISOLATED",
+
+          func: async (
+            engineName,
+            savedProfile,
+            savedPreferences
+          ) => {
+            const engine =
+              globalThis[engineName];
+
+            if (
+              typeof engine?.apply !== "function"
+            ) {
+              throw new Error(
+                `${engineName} not initialized.`
+              );
+            }
+
+            return await engine.apply(
+              savedProfile,
+              savedPreferences
+            );
+          },
+
+          args: [
+            globalName,
+            profile,
+            selfId,
+          ],
+        });
+
+      const result =
+        results?.[0]?.result || fallback;
+
+      console.info(
+        `Offerly ${globalName}:`,
+        result
+      );
+
+      return result;
+    } catch (error) {
+      console.warn(
+        `${globalName} failed:`,
+        error
+      );
+
+      return {
+        ...fallback,
+        failed: [error.message],
+      };
+    }
+  }
+
+  // ---------------------------------------
+  // AI AGENT
+  // ---------------------------------------
+
+  async function runAIAgent(
+    profile,
+    selfId
+  ) {
+    const fallback = {
+      filled: 0,
+      skipped: [],
+      failed: [],
+    };
+
+    if (
+      typeof window.offerlyAIAgent?.apply !==
+      "function"
+    ) {
+      console.warn(
+        "aiAgent.js is not loaded."
+      );
+
+      return {
+        ...fallback,
+        failed: [
+          "AI agent script is not loaded.",
+        ],
+      };
+    }
+
+    try {
+      // Re-scan so the agent only sees
+      // questions remaining after normal autofill.
+      const scan = await safeScan();
+
+      if (!scan.ok) {
+        return {
+          ...fallback,
+          failed: [
+            "AI could not scan the application.",
+          ],
+        };
+      }
+
+      status(
+        "AI is matching remaining answers..."
+      );
+
+      const result =
+        await window.offerlyAIAgent.apply({
+          fields: scan.fields,
+          profile,
+          selfId,
+          tabId: activeTabId,
+          runEngine,
+        });
+
+      console.info(
+        "Offerly AI agent result:",
+        result
+      );
+
+      return result || fallback;
+    } catch (error) {
+      console.warn(
+        "Offerly AI agent failed:",
+        error
+      );
+
+      return {
+        ...fallback,
+        failed: [error.message],
+      };
+    }
+  }
+
+  // ---------------------------------------
   // DEFAULT RESUME
-  // ------------------------------------
+  // ---------------------------------------
 
   async function getDefaultResume() {
     const preference = await getRow(
@@ -330,7 +476,8 @@
       "default_resume_name"
     );
 
-    const stored = preference?.default_resume_name;
+    const stored =
+      preference?.default_resume_name;
 
     if (!stored) return null;
 
@@ -340,12 +487,18 @@
       stored === "." ||
       stored === ".."
     ) {
-      throw new Error("Invalid resume filename.");
+      throw new Error(
+        "Invalid resume filename."
+      );
     }
 
-    const session = await getValidSession();
+    const session =
+      await getValidSession();
 
-    const path = [session.user.id, stored]
+    const path = [
+      session.user.id,
+      stored,
+    ]
       .map(encodeURIComponent)
       .join("/");
 
@@ -378,16 +531,21 @@
     }
 
     const filename = stored.includes("__")
-      ? stored.split("__").slice(1).join("__")
+      ? stored.split("__")
+          .slice(1)
+          .join("__")
       : stored;
 
-    const lower = filename.toLowerCase();
+    const lower =
+      filename.toLowerCase();
 
     if (
       !lower.endsWith(".pdf") &&
       !lower.endsWith(".docx")
     ) {
-      throw new Error("Unsupported resume format.");
+      throw new Error(
+        "Unsupported resume format."
+      );
     }
 
     return {
@@ -396,89 +554,321 @@
         ? "application/pdf"
         : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       bytes: Array.from(
-        new Uint8Array(await blob.arrayBuffer())
+        new Uint8Array(
+          await blob.arrayBuffer()
+        )
       ),
     };
   }
 
-  // ------------------------------------
+  // ---------------------------------------
+  // REVIEW PANEL
+  // ---------------------------------------
+
+  function needsAttention(field) {
+    if (
+      !field ||
+      field.type === "file" ||
+      field.type === "choice" ||
+      String(field.value || "").trim()
+    ) {
+      return false;
+    }
+
+    const label =
+      normalize(field.label);
+
+    if (
+      !label ||
+      label === "search" ||
+      label === "off" ||
+      label.startsWith("search off") ||
+      label.startsWith("field ") ||
+      label.startsWith("react select")
+    ) {
+      return false;
+    }
+
+    return Boolean(
+      field.required ||
+      field.sensitive ||
+      field.employmentQuestion ||
+      field.type === "select" ||
+      field.type === "custom"
+    );
+  }
+
+  function showReview(
+    fields,
+    scanOK,
+    extra = []
+  ) {
+    $("offerlyQuestionReview")?.remove();
+
+    const labels = [
+      ...fields
+        .filter(needsAttention)
+        .map((field) => field.label),
+      ...extra,
+    ];
+
+    if (!scanOK) {
+      labels.push(
+        "Application scan incomplete. Review the form manually."
+      );
+    }
+
+    const unique = [
+      ...new Map(
+        labels
+          .filter(Boolean)
+          .map((label) => [
+            normalize(label),
+            label,
+          ])
+      ).values(),
+    ];
+
+    const section =
+      document.createElement("section");
+
+    section.id =
+      "offerlyQuestionReview";
+
+    section.className =
+      "offerly-review";
+
+    const heading =
+      document.createElement("h3");
+
+    heading.textContent =
+      unique.length
+        ? `Needs your attention (${unique.length})`
+        : "Autofill review";
+
+    section.appendChild(heading);
+
+    const message =
+      document.createElement("p");
+
+    message.textContent =
+      unique.length
+        ? "Review these items on the application:"
+        : "Review the entire application before submitting.";
+
+    section.appendChild(message);
+
+    if (unique.length) {
+      const list =
+        document.createElement("ul");
+
+      list.className =
+        "offerly-missing-list";
+
+      for (const label of unique) {
+        const item =
+          document.createElement("li");
+
+        item.textContent = label;
+
+        list.appendChild(item);
+      }
+
+      section.appendChild(list);
+    }
+
+    $("autofillBtn")?.insertAdjacentElement(
+      "afterend",
+      section
+    );
+
+    return unique.length;
+  }
+
+  // ---------------------------------------
   // MAIN AUTOFILL
-  // ------------------------------------
+  // ---------------------------------------
 
   async function handleAutofill() {
     const button = $("autofillBtn");
 
-    if (!button || button.disabled) return;
+    if (!button || button.disabled) {
+      return;
+    }
 
     button.disabled = true;
 
     $("offerlyQuestionReview")?.remove();
 
     try {
-      status("Loading your Offerly profile...");
+      status(
+        "Loading your Offerly profile..."
+      );
 
-      const [profile, selfId] = await Promise.all([
-        getProfile(),
-        getSelfIdentification(),
-      ]);
+      const [profile, selfId] =
+        await Promise.all([
+          getProfile(),
+          getSelfIdentification(),
+        ]);
 
       await prepareEngine();
 
-      status("Filling personal information...");
+      // 1. Existing personal information.
+      let textResult = {
+        filled: 0,
+      };
 
-      const textResult = await runEngine(
-        "fillText",
-        profile
-      );
+      try {
+        status(
+          "Filling personal information..."
+        );
 
-      status("Scanning application questions...");
+        textResult =
+          await runEngine(
+            "fillText",
+            profile
+          ) || textResult;
+      } catch (error) {
+        console.warn(
+          "Personal information autofill:",
+          error
+        );
+      }
 
-      const fields = await scanFields();
-
+      // 2. Existing smart dropdown answers.
       let smartResult = {
         filled: 0,
         skipped: [],
         failed: [],
       };
 
-      if (window.offerlySmartAnswers?.apply) {
-        status("Automatically filling saved answers...");
+      const firstScan =
+        await safeScan();
 
-        smartResult =
-          await window.offerlySmartAnswers.apply({
-            fields,
+      if (
+        firstScan.ok &&
+        window.offerlySmartAnswers?.apply
+      ) {
+        try {
+          status(
+            "Filling saved dropdown answers..."
+          );
+
+          smartResult =
+            await window.offerlySmartAnswers.apply({
+              fields: firstScan.fields,
+              profile,
+              selfId,
+              tabId: activeTabId,
+              runEngine,
+            }) || smartResult;
+        } catch (error) {
+          console.warn(
+            "Smart dropdown answers:",
+            error
+          );
+        }
+      }
+
+      // 3. Universal interaction engine.
+      status(
+        "Checking additional form controls..."
+      );
+
+      const controlsResult =
+        await runAdditionalEngine(
+          "universalControls.js",
+          "offerlyUniversalControls",
+          profile,
+          selfId
+        );
+
+      // 4. Optional calendar driver.
+      let calendarResult = {
+        filled: 0,
+        skipped: 0,
+        failed: [],
+      };
+
+      try {
+        status(
+          "Checking calendar fields..."
+        );
+
+        calendarResult =
+          await runAdditionalEngine(
+            "calendarDriver.js",
+            "offerlyCalendarDriver",
             profile,
-            selfId,
-            tabId: activeTabId,
-            runEngine,
-          });
-      } else {
+            selfId
+          );
+      } catch (error) {
         console.warn(
-          "smartAnswers.js is not loaded"
+          "Calendar driver:",
+          error
         );
       }
 
-      // Resume attachment runs independently.
+      // 5. AI-assisted matching.
+      // Only considers unfilled fields.
+      const aiResult =
+        await runAIAgent(
+          profile,
+          selfId
+        );
+
+
+// Synchronize populated fields with the
+// website's own form-validation framework.
+let syncResult = null;
+
+try {
+  status("Validating filled application fields...");
+
+  if (window.offerlyFormSync?.apply) {
+    syncResult = await window.offerlyFormSync.apply(
+      activeTabId
+    );
+
+    console.info(
+      "Offerly form sync result:",
+      syncResult
+    );
+  }
+} catch (error) {
+  console.warn(
+    "Offerly form synchronization failed:",
+    error
+  );
+}
+
+
+      // 6. Preserve existing resume upload.
       let resumeMessage =
         "No default resume selected.";
 
       try {
-        status("Attaching your default resume...");
+        status(
+          "Attaching your default resume..."
+        );
 
-        const resume = await getDefaultResume();
+        const resume =
+          await getDefaultResume();
 
         if (resume) {
-          const result = await runEngine(
-            "attachResume",
-            resume.bytes,
-            resume.filename,
-            resume.mime
-          );
+          const result =
+            await runEngine(
+              "attachResume",
+              resume.bytes,
+              resume.filename,
+              resume.mime
+            );
 
           resumeMessage = result?.ok
             ? `${resume.filename} selected. Verify the website accepted it.`
             : `Resume needs review: ${
-                result?.reason || "Upload not confirmed"
+                result?.reason ||
+                "Upload not confirmed"
               }`;
         }
       } catch (error) {
@@ -491,31 +881,59 @@
           `Resume issue: ${error.message}`;
       }
 
-      // Re-scan after ALL filling attempts.
-      const finalFields = await scanFields();
+      // 7. Final review.
+      const finalScan =
+        await safeScan();
 
-      const missing =
-        showCompactNeedsAttention(finalFields);
+      const extra = [];
 
-      const totalFilled =
-        (textResult?.filled || 0) +
-        (smartResult?.filled || 0);
+      if (
+        controlsResult.failed?.length ||
+        calendarResult.failed?.length ||
+        aiResult.failed?.length
+      ) {
+        extra.push(
+          "Some answers could not be completed. Review manually."
+        );
+      }
+
+      const missing = showReview(
+        finalScan.fields,
+        finalScan.ok,
+        extra
+      );
+
+      const totalFilled = [
+        textResult,
+        smartResult,
+        controlsResult,
+        calendarResult,
+        aiResult,
+      ].reduce(
+        (sum, result) =>
+          sum +
+          (Number(result?.filled) || 0),
+        0
+      );
 
       status(
         `${totalFilled} fields filled. ` +
-        `${missing} fields need attention. ` +
+        `${missing} items need attention. ` +
         resumeMessage
       );
 
-      if (
-        smartResult.failed?.length ||
-        smartResult.skipped?.length
-      ) {
-        console.info(
-          "Offerly unresolved saved answers:",
-          smartResult
-        );
-      }
+      console.info(
+        "Offerly autofill summary:",
+        {
+          personalInfo: textResult,
+          smartAnswers: smartResult,
+          universalControls:
+            controlsResult,
+          calendar: calendarResult,
+          aiAgent: aiResult,
+          resume: resumeMessage,
+        }
+      );
     } catch (error) {
       console.error(
         "Offerly autofill failed:",
@@ -523,7 +941,8 @@
       );
 
       status(
-        error.message || "Autofill failed."
+        error.message ||
+        "Autofill failed."
       );
     } finally {
       button.disabled = false;

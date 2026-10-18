@@ -1,0 +1,146 @@
+
+.af-accordion {
+  margin: 14px 0;
+  overflow: hidden;
+  border: 1px solid var(--border-color, #383838);
+  border-radius: 14px;
+  background: var(--card-bg, #191919);
+}
+
+.af-accordion-trigger {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  padding: 20px 22px;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+
+.af-accordion-trigger:hover {
+  background: rgba(139, 92, 246, .07);
+}
+
+.af-accordion-trigger:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: -3px;
+}
+
+.af-accordion-icon {
+  flex: 0 0 36px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(139, 92, 246, .12);
+  font-size: 19px;
+}
+
+.af-accordion-heading {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.af-accordion-heading strong {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.af-accordion-heading small {
+  color: #a1a1aa;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.af-accordion-chevron {
+  color: #a1a1aa;
+  font-size: 24px;
+}
+
+.af-accordion-content {
+  padding: 0 22px 22px;
+}
+
+.af-accordion-content > .af-card {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.af-accordion-content > .af-card + .af-card {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color, #383838);
+}
+
+.af-accordion-content .af-card h2 {
+  font-size: 15px;
+}
+
+.af-onboarding-banner {
+  padding: 22px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(139, 92, 246, .45);
+  border-radius: 14px;
+  background: rgba(139, 92, 246, .08);
+}
+
+.af-onboarding-banner h2 {
+  margin: 0 0 8px;
+  font-size: 21px;
+}
+
+.af-onboarding-banner p {
+  margin: 0;
+  color: inherit;
+  opacity: .8;
+}
+
+.af-profile-progress {
+  height: 8px;
+  margin-top: 14px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(128, 128, 128, .2);
+}
+
+.af-profile-progress > div {
+  height: 100%;
+  border-radius: inherit;
+  background: #8b5cf6;
+  transition: width .2s ease;
+}
+
+.af-save-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.af-save-hint {
+  color: #a1a1aa;
+  font-size: 13px;
+}
+
+@media (max-width: 700px) {
+  .af-accordion-trigger {
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .af-accordion-content {
+    padding: 0 16px 18px;
+  }
+}
