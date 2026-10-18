@@ -258,12 +258,20 @@ async function saveDetectedJob(page) {
 
   const existing = await findExistingJob(url);
 
-  if (existing) {
-    savedJobId = existing.id;
-    setBadge(existing.status || "Already saved");
-    setStatus("This job is already in your Offerly dashboard.");
-    return;
-  }
+  
+if (existing) {
+  savedJobId = existing.id;
+
+  setBadge(existing.status || "Already saved");
+  setStatus(
+    "This job is already in your Offerly dashboard."
+  );
+
+  updateAppliedButton(existing.status || "Saved");
+
+  return;
+}
+
 
   const company = el("company").value.trim();
   const role = el("role").value.trim();
@@ -298,13 +306,21 @@ async function saveDetectedJob(page) {
     }),
   });
 
-  savedJobId = rows?.[0]?.id || null;
+  
+savedJobId = rows?.[0]?.id || null;
 
-  setBadge("✓ Saved");
-  setStatus("Job saved to Offerly. Ready to autofill?");
+setBadge("✓ Saved");
+setStatus("Job saved to Offerly. Ready to autofill?");
+
+updateAppliedButton("Saved");
+
 }
 
 async function analyzeAndSaveCurrentPage() {
+
+savedJobId = null;
+updateAppliedButton("Saved");
+
   const tab = await getCurrentTab();
 
   if (!tab?.id || !validJobUrl(tab.url)) {
@@ -427,3 +443,129 @@ el("notNowBtn").addEventListener("click", () => {
 });
 
 // Autofill button is handled by profileAutofill.js.
+
+
+/*
+ * MARK APPLICATION AS APPLIED
+ *
+ * Manually updates a saved application
+ * in the Offerly dashboard.
+ *
+ * Does not submit the employer's form.
+ */
+
+function updateAppliedButton(status = "Saved") {
+  const button = el("markAppliedBtn");
+  const hint = el("appliedHint");
+
+  if (!button) return;
+
+  const isApplied = status === "Applied";
+
+  button.disabled = !savedJobId || isApplied;
+  button.classList.toggle("applied", isApplied);
+
+  button.textContent = isApplied
+    ? "✓ Application Tracked"
+    : "✓ Mark as Applied";
+
+  if (hint) {
+    hint.textContent = isApplied
+      ? "This application is marked Applied in Offerly."
+      : savedJobId
+        ? "After submitting on the employer's website, click here to update your dashboard."
+        : "Save this job to Offerly before marking it as applied.";
+  }
+}
+
+async function markJobAsApplied() {
+  const button = el("markAppliedBtn");
+
+  if (!button || button.disabled || !savedJobId) {
+    return;
+  }
+
+  const confirmed = confirm(
+    "Have you already submitted this application " +
+    "on the employer's website?\n\n" +
+    "This will mark the job as Applied in Offerly. " +
+    "It will NOT submit the application for you."
+  );
+
+  if (!confirmed) return;
+
+  button.disabled = true;
+  button.textContent = "Updating application...";
+  setStatus("Marking application as Applied...");
+
+  try {
+    const session = await getValidSession();
+
+    // Only update a job belonging to this user.
+    // Prevent accidentally overwriting jobs
+    // that are already in another status.
+    const query = new URLSearchParams({
+      id: `eq.${savedJobId}`,
+      user_id: `eq.${session.user.id}`,
+      status: "eq.Saved"
+    });
+
+    const today = new Date();
+    const localDate = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, "0"),
+      String(today.getDate()).padStart(2, "0")
+    ].join("-");
+
+    const updated = await authenticatedRequest(
+      `applications?${query.toString()}`,
+      {
+        method: "PATCH",
+        headers: {
+          Prefer: "return=representation"
+        },
+        body: JSON.stringify({
+          status: "Applied",
+          date_applied: localDate
+        })
+      }
+    );
+
+    if (!Array.isArray(updated) || updated.length !== 1) {
+      throw new Error(
+        "The job wasn't updated. It may already have " +
+        "a different status. Refresh Offerly and try again."
+      );
+    }
+
+    setBadge("Applied");
+    updateAppliedButton("Applied");
+
+    setStatus(
+      "Success! This application is now marked " +
+      "Applied in your Offerly dashboard."
+    );
+
+    console.info(
+      "Offerly application marked Applied:",
+      savedJobId
+    );
+  } catch (error) {
+    console.error(
+      "Offerly Mark as Applied failed:",
+      error
+    );
+
+    setStatus(
+      error.message || "Could not update application."
+    );
+
+    button.disabled = false;
+    button.textContent = "✓ Mark as Applied";
+  }
+}
+
+el("markAppliedBtn")?.addEventListener(
+  "click",
+  markJobAsApplied
+);

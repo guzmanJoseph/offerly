@@ -1525,3 +1525,31 @@
 .networking-page .networking-header h1 {
   margin: 0;
 }
+
+
+/* Networking contact deletion */
+
+.networking-delete-button {
+  color: #94a3b8;
+  transition:
+    color 150ms ease,
+    background 150ms ease,
+    transform 150ms ease;
+}
+
+.networking-delete-button:hover:not(:disabled) {
+  color: #f87171;
+  background: rgba(239, 68, 68, 0.12);
+  transform: translateY(-1px);
+}
+
+.networking-delete-button:focus-visible {
+  outline: 2px solid #ef4444;
+  outline-offset: 2px;
+}
+
+.networking-delete-button:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+

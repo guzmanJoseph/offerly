@@ -33,6 +33,8 @@ export default function Networking() {
   const [editingContact, setEditingContact] = useState(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
+  const [deletingContactId, setDeletingContactId] = useState(null);
+const [deleteError, setDeleteError] = useState("");
 
   const fetchContacts = useCallback(async () => {
     setLoading(true);
@@ -112,6 +114,62 @@ export default function Networking() {
     setIsModalOpen(false);
     await fetchContacts();
   }
+
+
+async function handleDeleteContact(contact) {
+  if (!contact?.id || deletingContactId) return;
+
+  const confirmed = window.confirm(
+    `Delete ${contact.name || "this contact"} from Offerly?\n\n` +
+    "This permanently removes the contact and its saved " +
+    "notes and follow-up information. This cannot be undone."
+  );
+
+  if (!confirmed) return;
+
+  setDeleteError("");
+  setDeletingContactId(contact.id);
+
+  try {
+    const {
+      data: { user },
+      error: authError
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      throw new Error("Please sign in to delete a contact.");
+    }
+
+    const { data, error } = await supabase
+      .from("contacts")
+      .delete()
+      .eq("id", contact.id)
+      .eq("user_id", user.id)
+      .select("id");
+
+    if (error) throw error;
+
+    if (!data?.length) {
+      throw new Error(
+        "Contact wasn't deleted. Please refresh and try again."
+      );
+    }
+
+    setContacts(previous =>
+      previous.filter(item => item.id !== contact.id)
+    );
+
+    console.info("Offerly contact deleted successfully");
+  } catch (error) {
+    console.error("Could not delete contact:", error);
+    setDeleteError(
+      error.message || "Unable to delete contact. Try again."
+    );
+  } finally {
+    setDeletingContactId(null);
+  }
+}
+
 
   const normalizedSearch = search.trim().toLowerCase();
   const filteredContacts = contacts.filter((contact) => {
@@ -235,6 +293,17 @@ export default function Networking() {
         </label>
       </div>
 
+
+{deleteError && (
+  <div
+    className="networking-feedback networking-error"
+    role="alert"
+  >
+    {deleteError}
+  </div>
+)}
+
+
       {loadError ? (
         <div className="networking-feedback networking-error" role="alert">
           <p>{loadError}</p>
@@ -271,6 +340,8 @@ export default function Networking() {
             setEditingContact(contact);
             setIsModalOpen(true);
           }}
+          onDelete={handleDeleteContact}
+  deletingContactId={deletingContactId}
         />
       )}
 
