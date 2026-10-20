@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Offerly",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Fill basic information, attach your resume, and draft tailored application answers.",
   "minimum_chrome_version": "116",
   "permissions": [
@@ -12,30 +12,36 @@
     "debugger",
     "sidePanel"
   ],
+  "icons": {
+  "16": "offerly.png",
+  "32": "offerly.png",
+  "48": "offerly.png",
+  "128": "offerly.png"
+},
   "host_permissions": [
     "<all_urls>"
   ],
   "content_scripts": [
     {
       "matches": [
-        "https://greenhouse.io/*",
-        "https://*.greenhouse.io/*",
-        "https://ashbyhq.com/*",
-        "https://*.ashbyhq.com/*",
-        "https://*.myworkdayjobs.com/*",
-        "https://*.myworkdaysite.com/*",
-        "https://jobs.lever.co/*"
+        "https://*/*"
       ],
       "js": [
         "questionDrafts.js"
       ],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true,
+      "match_about_blank": true
     }
   ],
   "background": {
     "service_worker": "background.js"
   },
   "action": {
-    "default_title": "Open Offerly Side Panel"
+  "default_title": "Open Offerly Side Panel",
+  "default_icon": {
+    "16": "offerly.png",
+    "32": "offerly.png"
   }
+}
 }

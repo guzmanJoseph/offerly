@@ -585,3 +585,132 @@
 .jd-node {
   width: 23.077%;
 }
+
+.journey-dashboard .jd-submitted-summary {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 24px;
+  padding: 28px 30px;
+  border: 1px solid rgba(82, 149, 255, 0.35);
+  border-radius: 20px;
+  background:
+    radial-gradient(
+      ellipse at top right,
+      rgba(57, 214, 206, 0.09),
+      transparent 55%
+    ),
+    linear-gradient(120deg, #152744, #101c30);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+.jd-submitted-icon {
+  display: grid;
+  place-items: center;
+  flex: 0 0 58px;
+  height: 58px;
+  border: 1px solid rgba(82, 149, 255, 0.3);
+  border-radius: 17px;
+  background: rgba(82, 149, 255, 0.12);
+  color: #70adff;
+  font-size: 32px;
+}
+
+.jd-submitted-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.jd-submitted-label {
+  display: block;
+  color: #a5c7ff;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.jd-submitted-number {
+  display: block;
+  margin: 5px 0;
+  color: #f4f8ff;
+  font-size: clamp(38px, 4vw, 54px);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.journey-dashboard .jd-submitted-copy p {
+  margin: 9px 0 0;
+  max-width: 560px;
+  color: #aebed5;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.jd-submitted-detail {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 240px;
+  padding: 12px 15px;
+  border: 1px solid rgba(82, 149, 255, 0.22);
+  border-radius: 12px;
+  background: rgba(82, 149, 255, 0.08);
+  color: #c4d5ed;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.jd-submitted-detail strong {
+  color: #ffffff;
+}
+
+.jd-submitted-dot {
+  flex: 0 0 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #5295ff;
+}
+
+@media (max-width: 760px) {
+  .journey-dashboard .jd-submitted-summary {
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 22px;
+  }
+
+  .jd-submitted-copy {
+    flex-basis: calc(100% - 80px);
+  }
+
+  .jd-submitted-detail {
+    max-width: none;
+    width: 100%;
+  }
+}
+
+.journey-dashboard .jd-total-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  border: 1px solid rgba(82, 149, 255, 0.25);
+  border-radius: 8px;
+  background: rgba(82, 149, 255, 0.09);
+  color: #aebed5;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.jd-total-badge > span:first-child {
+  color: #70adff;
+  font-size: 15px;
+}
+
+.jd-total-badge strong {
+  color: #f4f8ff;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}

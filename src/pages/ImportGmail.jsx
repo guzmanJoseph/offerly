@@ -11,7 +11,6 @@ import {
 } from "react-icons/fi";
 import { supabase } from "../lib/supabaseClient";
 import "../styles/importGmail.css";
-import GmailHistoryImport from "../components/GmailHistoryImport";
 
 function formatDate(date) {
   if (!date) return "Never";
@@ -420,8 +419,6 @@ export default function GmailImport() {
           </div>
         )}
       </section>
-
-      <GmailHistoryImport connected={connected} />
 
       <section className="gmail-change-card" aria-labelledby="gmail-change-title">
         <div className="gmail-section-heading">

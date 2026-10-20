@@ -699,105 +699,169 @@
   // ---------------------------------------------
 
   function resumeContext(input) {
-    const values = [
-      input.id,
-      input.name,
-      input.getAttribute("aria-label"),
-      ...[...(input.labels || [])].map(
-        (label) => label.textContent
-      ),
-    ];
+  const labelledBy = (
+    input.getAttribute("aria-labelledby") || ""
+  )
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(id => document.getElementById(id)?.textContent || "");
 
-    let parent = input.parentElement;
+  const values = [
+    input.id,
+    input.name,
+    input.getAttribute("aria-label"),
+    input.getAttribute("data-automation-id"),
+    ...labelledBy,
+    ...Array.from(input.labels || [], label => label.textContent),
+  ];
 
-    for (
-      let depth = 0;
-      parent && depth < 6;
-      depth++
+  let scope = input.parentElement;
+
+  // Inspect nearby upload controls without borrowing labels
+  // from other document-upload sections.
+  for (let depth = 0; scope && depth < 7; depth++) {
+    if (scope.matches("form, main, body, html")) break;
+
+    if (
+      scope.querySelectorAll('input[type="file"]').length > 1
     ) {
-      if (
-        parent.matches("form, main, body") ||
-        parent.querySelectorAll(
-          "input[type='file']"
-        ).length > 1
-      ) {
-        break;
-      }
-
-      values.push(
-        ...[...parent.querySelectorAll(
-          "label, legend, h2, h3, h4"
-        )]
-          .slice(0, 5)
-          .map((element) => element.textContent)
-      );
-
-      parent = parent.parentElement;
+      break;
     }
 
-    return normalize(
-      values.filter(Boolean).join(" ")
+    values.push(
+      scope.getAttribute("aria-label"),
+      scope.getAttribute("data-automation-id"),
+      ...Array.from(
+        scope.querySelectorAll(
+          "label, legend, h2, h3, h4, [data-automation-id]"
+        )
+      )
+        .slice(0, 20)
+        .flatMap(element => [
+          element.getAttribute("data-automation-id"),
+          element.textContent?.slice(0, 300),
+        ])
+    );
+
+    scope = scope.parentElement;
+  }
+
+  return values
+    .filter(Boolean)
+    .join(" ")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+async function attachResume(bytes, name, mimeType) {
+  const failure = reason => ({ ok: false, reason });
+
+  function locateResumeInput() {
+    const candidates = Array.from(
+      document.querySelectorAll('input[type="file"]')
+    )
+      .filter(input =>
+        !input.disabled &&
+        input.getAttribute("aria-disabled") !== "true"
+      )
+      .map(input => {
+        const context = resumeContext(input);
+
+        const direct = [
+          input.id,
+          input.name,
+          input.getAttribute("aria-label"),
+          input.getAttribute("data-automation-id"),
+          ...Array.from(
+            input.labels || [],
+            label => label.textContent
+          ),
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+
+        const resumePattern = /resume|résumé|curriculum\s*vitae|\bcv\b/i;
+        const otherDocumentPattern =
+          /cover[\s_-]*letter|transcript|portfolio/i;
+
+        // Never substitute a cover-letter or other document field.
+        if (otherDocumentPattern.test(direct)) return null;
+
+        const directMatch = resumePattern.test(direct);
+        const nearbyMatch =
+          resumePattern.test(context) &&
+          !otherDocumentPattern.test(context);
+
+        if (!directMatch && !nearbyMatch) return null;
+
+        return {
+          input,
+          score: directMatch ? 100 : 50,
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.score - a.score);
+
+    if (!candidates.length) return null;
+
+    if (
+      candidates[1] &&
+      candidates[0].score === candidates[1].score
+    ) {
+      return null;
+    }
+
+    return candidates[0].input;
+  }
+
+  // Some application pages create their upload input after rendering.
+  let input = null;
+
+  for (let attempt = 0; attempt < 12; attempt++) {
+    input = locateResumeInput();
+    if (input) break;
+    await wait(250);
+  }
+
+  if (!input) {
+    return failure(
+      "Could not identify one résumé upload field. " +
+      "Open the résumé upload section and try again."
     );
   }
 
-  async function attachResume(bytes, name, mimeType) {
-    const inputs = [
-      ...document.querySelectorAll(
-        "input[type='file']"
-      ),
-    ];
-
-    const ranked = inputs.map((input) => {
-      const context = resumeContext(input);
-      const direct = normalize(
-        `${input.id} ${input.name}`
-      );
-
-      const score =
-        (
-          /resume|curriculum vitae|\bcv\b/.test(
-            context
-          )
-            ? 10
-            : 0
-        ) +
-        (
-          /resume|\bcv\b/.test(direct)
-            ? 10
-            : 0
-        ) -
-        (
-          /cover.?letter/.test(context)
-            ? 40
-            : 0
-        );
-
-      return { input, score };
-    }).sort(
-      (a, b) => b.score - a.score
+  if (input.files?.length) {
+    return failure(
+      "Your existing résumé selection was kept."
     );
+  }
 
-    if (
-      !ranked[0] ||
-      ranked[0].score <= 0 ||
-      ranked[1]?.score === ranked[0].score
-    ) {
-      return {
-        ok: false,
-        reason:
-          "Could not uniquely identify the resume upload field",
-      };
-    }
+  const extension = name.split(".").pop()?.toLowerCase();
+  const accept = (input.accept || "")
+    .toLowerCase()
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean);
 
-    const input = ranked[0].input;
+  const accepted = !accept.length || accept.some(value =>
+    value === `.${extension}` ||
+    value === mimeType.toLowerCase() ||
+    value === "*/*" ||
+    (
+      value.endsWith("/*") &&
+      mimeType.toLowerCase().startsWith(value.slice(0, -1))
+    )
+  );
 
-    if (input.disabled) {
-      return {
-        ok: false,
-        reason: "Resume upload is disabled",
-      };
-    }
+  if (!accepted) {
+    return failure(
+      `This upload field does not accept ${extension?.toUpperCase()} files.`
+    );
+  }
 
+  try {
     const file = new File(
       [new Uint8Array(bytes)],
       name,
@@ -807,45 +871,51 @@
     const transfer = new DataTransfer();
     transfer.items.add(file);
 
-    try {
-      input.files = transfer.files;
-
-      input.dispatchEvent(
-        new Event("input", { bubbles: true })
+    // Check immediately before changing this specific field.
+    if (!input.isConnected || input.disabled) {
+      return failure(
+        "The upload field changed. Try attaching your résumé again."
       );
-
-      input.dispatchEvent(
-        new Event("change", { bubbles: true })
-      );
-
-      await wait(850);
-
-      const selected = input.files?.[0];
-
-      if (
-        selected?.name === name &&
-        selected?.size === file.size
-      ) {
-        return {
-          ok: true,
-          filename: name,
-          needsVerification: true,
-        };
-      }
-
-      return {
-        ok: false,
-        reason:
-          "The website did not retain the selected resume",
-      };
-    } catch (error) {
-      return {
-        ok: false,
-        reason: error.message,
-      };
     }
-  }
 
+    if (input.files?.length) {
+      return failure("Your existing résumé selection was kept.");
+    }
+
+    input.files = transfer.files;
+
+    const selected = input.files?.[0];
+
+    if (
+      selected?.name !== name ||
+      selected?.size !== file.size
+    ) {
+      return failure(
+        "The browser could not select your résumé. Upload it manually."
+      );
+    }
+
+    input.dispatchEvent(
+      new Event("input", { bubbles: true, composed: true })
+    );
+
+    input.dispatchEvent(
+      new Event("change", { bubbles: true, composed: true })
+    );
+
+    // An uploader may clear or replace the input after receiving
+    // the file. That alone does not mean its upload failed.
+    return {
+      ok: true,
+      filename: name,
+      needsVerification: true,
+    };
+  } catch (error) {
+    return failure(
+      error.message || "Upload your résumé manually on this page."
+    );
+  }
+}
   // ---------------------------------------------
   // EXPOSE ENGINE TO OFFERLY POPUP
   // ---------------------------------------------

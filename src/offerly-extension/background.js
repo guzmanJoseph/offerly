@@ -849,15 +849,34 @@ chrome.runtime.onMessage.addListener(
       return false;
     }
 
-    if (
-      sender.id !== chrome.runtime.id ||
-      !sender.tab?.id ||
-      sender.frameId !== 0 ||
-      !/^https:\/\//i.test(sender.url || "")
-    ) {
-      reply({ error: "Open an HTTPS job application page." });
-      return false;
-    }
+  function isHttps(value) {
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+const frameIsHttps = isHttps(sender.url);
+
+const inheritedFrameIsHttps =
+  (
+    sender.url === "about:blank" ||
+    sender.url === "about:srcdoc"
+  ) &&
+  isHttps(sender.origin);
+
+if (
+  sender.id !== chrome.runtime.id ||
+  !Number.isInteger(sender.tab?.id) ||
+  (!frameIsHttps && !inheritedFrameIsHttps)
+) {
+  reply({
+    error: "Open an HTTPS job application page.",
+  });
+
+  return false;
+}
 
     (async () => {
       const payload = message.payload;

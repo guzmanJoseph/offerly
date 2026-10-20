@@ -60,19 +60,6 @@
         throw new Error("Invalid résumé filename.");
       }
 
-      // Skip downloading if a file is already selected.
-      const checks = await chrome.scripting.executeScript({
-        target: { tabId },
-        func: () =>
-          Array.from(
-            document.querySelectorAll('input[type="file"]')
-          ).some(input => input.files?.length),
-      });
-
-      if (checks?.[0]?.result) {
-        return "Existing file selection kept.";
-      }
-
       status("Basic information filled. Attaching your résumé…");
 
       const path = [session.user.id, stored]
@@ -115,16 +102,6 @@
         func: async (bytes, name, mime) => {
           // Check again in case the user selected a file
           // while the résumé was downloading.
-          const existingFile = Array.from(
-            document.querySelectorAll('input[type="file"]')
-          ).some(input => input.files?.length);
-
-          if (existingFile) {
-            return {
-              ok: false,
-              reason: "Existing file selection kept.",
-            };
-          }
 
           if (!globalThis.offerlyEngine?.attachResume) {
             return {

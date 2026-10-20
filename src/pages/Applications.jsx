@@ -224,7 +224,7 @@ ${pageText}
     onClose={() => setIsImportOpen(false)}
     onImported={fetchApplications}
   />
-)}
+)} 
     </>
   );
 }

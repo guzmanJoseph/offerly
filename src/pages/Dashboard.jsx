@@ -13,13 +13,23 @@ const STAGES = [
   { name: "Rejected", icon: "×", color: "#ff9297" },
 ];
 
+const SUBMITTED_STATUSES = new Set(
+  STAGES.map(stage => stage.name)
+);
+
 const POSITIONS = {
-  Saved: [25, 150],
   Applied: [250, 150],
   Assessment: [490, 45],
   Interview: [490, 210],
   Offer: [800, 45],
   Rejected: [800, 260],
+};
+
+const EDGE_COLORS = {
+  blue: "#5295ff",
+  purple: "#a18aff",
+  green: "#68dfaa",
+  red: "#ff9297",
 };
 
 const EDGES = [
@@ -112,6 +122,9 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
 
+  const [stageTotals, setStageTotals] = useState(null);
+  const [stageTotalsError, setStageTotalsError] = useState("");
+
   const [journey, setJourney] = useState(null);
   const [journeyError, setJourneyError] = useState("");
   const [historyRefresh, setHistoryRefresh] = useState(0);
@@ -137,8 +150,48 @@ export default function Dashboard() {
     };
   }, []);
 
-  // Refresh recorded transition counts whenever applications
-  // are loaded or changed.
+  useEffect(() => {
+    if (loading) return;
+
+    let active = true;
+
+    async function loadStageTotals() {
+      setStageTotals(null);
+      setStageTotalsError("");
+
+      try {
+        const { data, error: totalsError } = await supabase.rpc(
+          "get_application_stage_totals"
+        );
+
+        if (totalsError) throw totalsError;
+
+        if (active) {
+          setStageTotals(
+            Object.fromEntries(
+              (data || []).map(item => [
+                item.stage,
+                Number(item.application_count),
+              ])
+            )
+          );
+        }
+      } catch (err) {
+        if (active) {
+          setStageTotalsError(
+            err.message || "Could not load stage totals."
+          );
+        }
+      }
+    }
+
+    loadStageTotals();
+
+    return () => {
+      active = false;
+    };
+  }, [applications, loading, historyRefresh]);
+
   useEffect(() => {
     if (loading) return;
 
@@ -155,7 +208,9 @@ export default function Dashboard() {
 
         if (historyError) throw historyError;
 
-        if (active) setJourney(data || []);
+        if (active) {
+          setJourney(data || []);
+        }
       } catch (err) {
         if (active) {
           setJourneyError(
@@ -185,7 +240,9 @@ export default function Dashboard() {
   async function fetchApplications() {
     const version = ++requestVersion.current;
 
-    if (mounted.current) setError("");
+    if (mounted.current) {
+      setError("");
+    }
 
     try {
       const user = await currentUser();
@@ -207,26 +264,38 @@ export default function Dashboard() {
         if (!data || data.length < 500) break;
       }
 
-      if (mounted.current && version === requestVersion.current) {
+      if (
+        mounted.current &&
+        version === requestVersion.current
+      ) {
         setApplications(records);
       }
     } catch (err) {
-      if (mounted.current && version === requestVersion.current) {
-        setError(err.message || "Could not load applications.");
+      if (
+        mounted.current &&
+        version === requestVersion.current
+      ) {
+        setError(
+          err.message || "Could not load applications."
+        );
       }
     } finally {
-      if (mounted.current && version === requestVersion.current) {
+      if (
+        mounted.current &&
+        version === requestVersion.current
+      ) {
         setLoading(false);
       }
     }
   }
 
-  const counts = Object.fromEntries(
-    STAGES.map(stage => [
-      stage.name,
-      applications.filter(app => app.status === stage.name).length,
-    ])
-  );
+  // Count each submitted application once, regardless
+  // of which submitted stage it currently occupies.
+  const totalSubmitted = new Set(
+    applications
+      .filter(app => SUBMITTED_STATUSES.has(app.status))
+      .map(app => app.id)
+  ).size;
 
   const transitionCounts = Object.fromEntries(
     (journey || []).map(item => [
@@ -241,15 +310,18 @@ export default function Dashboard() {
 
   const otherTransitions = (journey || []).filter(
     item =>
-      !knownEdges.has(edgeKey(item.from_status, item.to_status)) &&
+      !knownEdges.has(
+        edgeKey(item.from_status, item.to_status)
+      ) &&
       Number(item.application_count) > 0
   );
 
   const unknownCount = applications.filter(
-  app =>
-    app.status !== "Saved" &&
-    !STAGES.some(stage => stage.name === app.status)
-).length;
+    app =>
+      app.status !== "Saved" &&
+      !SUBMITTED_STATUSES.has(app.status)
+  ).length;
+
   const visibleApplications = applications.filter(app =>
     [app.company, app.role, app.location, app.status]
       .filter(Boolean)
@@ -261,7 +333,7 @@ export default function Dashboard() {
   async function changeStatus(id, newStatus) {
     if (
       mutationLock.current ||
-      !STAGES.some(stage => stage.name === newStatus)
+      !SUBMITTED_STATUSES.has(newStatus)
     ) {
       return;
     }
@@ -280,9 +352,8 @@ export default function Dashboard() {
     try {
       const user = await currentUser();
 
-      const dateApplied = newStatus === "Saved"
-        ? null
-        : app.status === "Saved"
+      const dateApplied =
+        app.status === "Saved"
           ? app.date_applied || localToday()
           : app.date_applied || null;
 
@@ -296,9 +367,10 @@ export default function Dashboard() {
         .eq("id", app.id)
         .eq("user_id", user.id);
 
-      query = app.status == null
-        ? query.is("status", null)
-        : query.eq("status", app.status);
+      query =
+        app.status == null
+          ? query.is("status", null)
+          : query.eq("status", app.status);
 
       const { data, error: updateError } =
         await query.select("*").maybeSingle();
@@ -314,12 +386,16 @@ export default function Dashboard() {
       }
 
       setApplications(previous =>
-        previous.map(item => item.id === data.id ? data : item)
+        previous.map(item =>
+          item.id === data.id ? data : item
+        )
       );
 
       setNotice(`${app.company} moved to ${newStatus}.`);
     } catch (err) {
-      setError(err.message || "Could not update the application.");
+      setError(
+        err.message || "Could not update the application."
+      );
     } finally {
       mutationLock.current = false;
       setPendingId(null);
@@ -365,7 +441,9 @@ export default function Dashboard() {
         role: form.role.trim(),
         status: form.status,
         date_applied:
-          form.status === "Saved" ? null : form.dateApplied || null,
+          form.status === "Saved"
+            ? null
+            : form.dateApplied || null,
         location: form.location,
         priority: form.priority,
         notes: form.notes,
@@ -376,7 +454,10 @@ export default function Dashboard() {
       const query = editing.isNew
         ? supabase
             .from("applications")
-            .insert({ ...payload, user_id: user.id })
+            .insert({
+              ...payload,
+              user_id: user.id,
+            })
         : supabase
             .from("applications")
             .update(payload)
@@ -391,13 +472,17 @@ export default function Dashboard() {
       setApplications(previous =>
         editing.isNew
           ? [data, ...previous]
-          : previous.map(item => item.id === data.id ? data : item)
+          : previous.map(item =>
+              item.id === data.id ? data : item
+            )
       );
 
       setEditing(null);
       setNotice("Application saved.");
     } catch (err) {
-      const message = err.message || "Could not save the application.";
+      const message =
+        err.message || "Could not save the application.";
+
       setError(message);
       window.alert(message);
     } finally {
@@ -410,16 +495,23 @@ export default function Dashboard() {
     event.preventDefault();
     setDragOver("");
 
-    const id = event.dataTransfer.getData("application/offerly-id");
+    const id = event.dataTransfer.getData(
+      "application/offerly-id"
+    );
 
-    if (id) changeStatus(id, stage);
+    if (id) {
+      changeStatus(id, stage);
+    }
   }
 
   return (
     <div className="journey-dashboard">
       <header className="jd-header">
         <div>
-          <span className="jd-eyebrow">YOUR WORKSPACE</span>
+          <span className="jd-eyebrow">
+            YOUR WORKSPACE
+          </span>
+
           <h1>Your job search, connected.</h1>
           <p>Every application. A clearer next step.</p>
         </div>
@@ -447,13 +539,21 @@ export default function Dashboard() {
       {error && (
         <div className="jd-error" role="alert">
           <span>{error}</span>
-          <button type="button" onClick={fetchApplications}>
+
+          <button
+            type="button"
+            onClick={fetchApplications}
+          >
             Refresh
           </button>
         </div>
       )}
 
-      <p className="jd-announcement" role="status" aria-live="polite">
+      <p
+        className="jd-announcement"
+        role="status"
+        aria-live="polite"
+      >
         {notice}
       </p>
 
@@ -466,25 +566,45 @@ export default function Dashboard() {
           <section className="jd-panel">
             <div className="jd-section-header">
               <div>
+                <div className="jd-total-badge">
+                  <span aria-hidden="true">↗</span>
+
+                  <strong>
+                    {totalSubmitted.toLocaleString()}
+                  </strong>
+
+                  <span>total submitted</span>
+                </div>
+
                 <h2>Application journey</h2>
+
                 <p>
-                  {applications.length} applications ·
-                  Boxes: current status · Arrows: recorded journeys
+                  Boxes: lifetime recorded stages ·
+                  Arrows: recorded journeys
                 </p>
               </div>
 
               <button
                 type="button"
-                onClick={() => setHistoryRefresh(value => value + 1)}
+                onClick={() =>
+                  setHistoryRefresh(value => value + 1)
+                }
               >
                 Refresh counts
               </button>
             </div>
 
+            {stageTotalsError && (
+              <p className="jd-warning" role="alert">
+                Stage totals unavailable: {stageTotalsError}
+              </p>
+            )}
+
             {journeyError && (
               <p className="jd-warning" role="alert">
                 History unavailable: {journeyError}
-                {" "}Make sure the journey-history SQL has been run.
+                {" "}
+                Make sure the journey-history SQL has been run.
               </p>
             )}
 
@@ -497,65 +617,67 @@ export default function Dashboard() {
                   aria-label="Application transitions and recorded application counts"
                 >
                   <defs>
-                    {[
-                      ["blue", "#5295ff"],
-                      ["purple", "#a18aff"],
-                      ["green", "#68dfaa"],
-                      ["red", "#ff9297"],
-                    ].map(([id, color]) => (
-                      <marker
-                        key={id}
-                        id={`jd-arrow-${id}`}
-                        viewBox="0 0 10 10"
-                        refX="9"
-                        refY="5"
-                        markerWidth="7"
-                        markerHeight="7"
-                        orient="auto"
-                      >
-                        <path
-                          d="M 0 0 L 10 5 L 0 10 z"
-                          fill={color}
-                        />
-                      </marker>
-                    ))}
+                    {Object.entries(EDGE_COLORS).map(
+                      ([id, color]) => (
+                        <marker
+                          key={id}
+                          id={`jd-arrow-${id}`}
+                          viewBox="0 0 10 10"
+                          refX="9"
+                          refY="5"
+                          markerWidth="7"
+                          markerHeight="7"
+                          orient="auto"
+                        >
+                          <path
+                            d="M 0 0 L 10 5 L 0 10 z"
+                            fill={color}
+                          />
+                        </marker>
+                      )
+                    )}
                   </defs>
 
-                  {EDGES.map(edge => {
-                    const colors = {
-                      blue: "#5295ff",
-                      purple: "#a18aff",
-                      green: "#68dfaa",
-                      red: "#ff9297",
-                    };
-
-                    return (
-                      <path
-                        key={edgeKey(edge.from, edge.to)}
-                        className="jd-edge"
-                        d={edge.path}
-                        stroke={colors[edge.color]}
-                        markerEnd={`url(#jd-arrow-${edge.color})`}
-                      />
-                    );
-                  })}
+                  {EDGES.map(edge => (
+                    <path
+                      key={edgeKey(edge.from, edge.to)}
+                      className="jd-edge"
+                      d={edge.path}
+                      stroke={EDGE_COLORS[edge.color]}
+                      markerEnd={`url(#jd-arrow-${edge.color})`}
+                    />
+                  ))}
 
                   {EDGES.map(edge => {
-                    const available = journey !== null && !journeyError;
+                    const available =
+                      journey !== null && !journeyError;
+
                     const count = available
-                      ? transitionCounts[edgeKey(edge.from, edge.to)] || 0
+                      ? transitionCounts[
+                          edgeKey(edge.from, edge.to)
+                        ] || 0
                       : null;
 
-                    const label = count === null
-                      ? journeyError ? "!" : "…"
-                      : String(count);
+                    const label =
+                      count === null
+                        ? journeyError
+                          ? "!"
+                          : "…"
+                        : String(count);
 
-                    const width = Math.max(30, label.length * 9 + 16);
+                    const width = Math.max(
+                      30,
+                      label.length * 9 + 16
+                    );
+
                     const [x, y] = edge.label;
 
                     return (
                       <g
-                        key={`label-${edgeKey(edge.from, edge.to)}`}
+                        key={`label-${edgeKey(
+                          edge.from,
+                          edge.to
+                        )}`}
                         className="jd-edge-label"
                         transform={`translate(${x}, ${y})`}
                       >
@@ -574,7 +696,10 @@ export default function Dashboard() {
                           rx="7"
                         />
 
-                        <text textAnchor="middle" dy="0.35em">
+                        <text
+                          textAnchor="middle"
+                          dy="0.35em"
+                        >
                           {label}
                         </text>
                       </g>
@@ -584,6 +709,12 @@ export default function Dashboard() {
 
                 {STAGES.map(stage => {
                   const [x, y] = POSITIONS[stage.name];
+
+                  const total = stageTotalsError
+                    ? "!"
+                    : stageTotals === null
+                      ? "…"
+                      : stageTotals[stage.name] || 0;
 
                   return (
                     <button
@@ -598,11 +729,16 @@ export default function Dashboard() {
                       }}
                       onClick={() =>
                         setFilter(previous =>
-                          previous === stage.name ? "" : stage.name
+                          previous === stage.name
+                            ? ""
+                            : stage.name
                         )
                       }
                     >
-                      <span className="jd-node-icon" aria-hidden="true">
+                      <span
+                        className="jd-node-icon"
+                        aria-hidden="true"
+                      >
                         {stage.icon}
                       </span>
 
@@ -610,7 +746,12 @@ export default function Dashboard() {
                         <span className="jd-node-label">
                           {stage.name}
                         </span>
-                        <strong>{counts[stage.name]}</strong>
+
+                        <strong
+                          title={stageTotalsError || undefined}
+                        >
+                          {total}
+                        </strong>
                       </span>
                     </button>
                   );
@@ -619,23 +760,33 @@ export default function Dashboard() {
             </div>
 
             <p className="jd-flow-note">
-              Each arrow counts distinct applications that made that direct
-              move since tracking began. Earlier unrecorded steps are unknown.
+              Each arrow counts distinct applications that
+              made that direct move since tracking began.
+              Earlier unrecorded steps are unknown.
               Repeated moves count once per arrow.
             </p>
 
             {otherTransitions.length > 0 && (
               <details className="jd-other-transitions">
-                <summary>Other recorded transitions</summary>
+                <summary>
+                  Other recorded transitions
+                </summary>
+
                 <ul>
                   {otherTransitions.map(item => (
                     <li
-                      key={edgeKey(item.from_status, item.to_status)}
+                      key={edgeKey(
+                        item.from_status,
+                        item.to_status
+                      )}
                     >
                       <span>
                         {item.from_status} → {item.to_status}
                       </span>
-                      <strong>{Number(item.application_count)}</strong>
+
+                      <strong>
+                        {Number(item.application_count)}
+                      </strong>
                     </li>
                   ))}
                 </ul>
@@ -647,12 +798,17 @@ export default function Dashboard() {
             <div className="jd-section-header">
               <div>
                 <h2>Your application board</h2>
-                <p>Drag a card or use its status menu to move it.</p>
+                <p>
+                  Drag a card or use its status menu to move it.
+                </p>
               </div>
 
               <div className="jd-board-tools">
                 {filter && (
-                  <button type="button" onClick={() => setFilter("")}>
+                  <button
+                    type="button"
+                    onClick={() => setFilter("")}
+                  >
                     Show all
                   </button>
                 )}
@@ -663,151 +819,180 @@ export default function Dashboard() {
                   aria-label="Search applications"
                   placeholder="Search applications…"
                   value={search}
-                  onChange={event => setSearch(event.target.value)}
+                  onChange={event =>
+                    setSearch(event.target.value)
+                  }
                 />
               </div>
             </div>
 
             {unknownCount > 0 && (
               <p className="jd-warning">
-                {unknownCount} applications have unrecognized statuses.
-                Update them on the Applications page to show them here.
+                {unknownCount} applications have unrecognized
+                statuses. Update them on the Applications page
+                to show them here.
               </p>
             )}
 
             <div className="jd-board">
-              {STAGES.filter(stage => !filter || stage.name === filter)
-                .map(stage => {
-                  const cards = visibleApplications.filter(
-                    app => app.status === stage.name
-                  );
+              {STAGES.filter(
+                stage => !filter || stage.name === filter
+              ).map(stage => {
+                const cards = visibleApplications.filter(
+                  app => app.status === stage.name
+                );
 
-                  return (
-                    <section
-                      key={stage.name}
-                      className={`jd-column ${
-                        dragOver === stage.name ? "jd-drag-over" : ""
-                      }`}
-                      style={{ "--stage": stage.color }}
-                      aria-label={`${stage.name} applications`}
-                      onDragOver={event => {
-                        if (
-                          event.dataTransfer.types.includes(
-                            "application/offerly-id"
-                          )
-                        ) {
-                          event.preventDefault();
-                          setDragOver(stage.name);
-                        }
-                      }}
-                      onDrop={event =>
-                        dropApplication(event, stage.name)
+                return (
+                  <section
+                    key={stage.name}
+                    className={`jd-column ${
+                      dragOver === stage.name
+                        ? "jd-drag-over"
+                        : ""
+                    }`}
+                    style={{ "--stage": stage.color }}
+                    aria-label={`${stage.name} applications`}
+                    onDragOver={event => {
+                      if (
+                        event.dataTransfer.types.includes(
+                          "application/offerly-id"
+                        )
+                      ) {
+                        event.preventDefault();
+                        setDragOver(stage.name);
                       }
-                    >
-                      <div className="jd-column-header">
-                        <h3>
-                          <span className="jd-dot" />
-                          {stage.name}
-                          <span className="jd-column-count">
-                            {cards.length}
-                          </span>
-                        </h3>
+                    }}
+                    onDrop={event =>
+                      dropApplication(event, stage.name)
+                    }
+                  >
+                    <div className="jd-column-header">
+                      <h3>
+                        <span className="jd-dot" />
+                        {stage.name}
 
+                        <span className="jd-column-count">
+                          {cards.length}
+                        </span>
+                      </h3>
+
+                      <button
+                        type="button"
+                        aria-label={`Add ${stage.name} application`}
+                        disabled={pendingId !== null}
+                        onClick={() =>
+                          addApplication(stage.name)
+                        }
+                      >
+                        +
+                      </button>
+                    </div>
+
+                    {!cards.length && (
+                      <p className="jd-empty">
+                        {search
+                          ? "No matching applications."
+                          : "No applications here yet."}
+                      </p>
+                    )}
+
+                    {cards.map(app => (
+                      <article
+                        className="jd-job"
+                        key={app.id}
+                        draggable={
+                          pendingId === null && !editing
+                        }
+                        aria-busy={pendingId === app.id}
+                        onDragStart={event => {
+                          event.dataTransfer.setData(
+                            "application/offerly-id",
+                            String(app.id)
+                          );
+
+                          event.dataTransfer.effectAllowed =
+                            "move";
+                        }}
+                        onDragEnd={() => setDragOver("")}
+                      >
                         <button
                           type="button"
-                          aria-label={`Add ${stage.name} application`}
+                          className="jd-job-open"
                           disabled={pendingId !== null}
-                          onClick={() => addApplication(stage.name)}
+                          onClick={() => openApplication(app)}
                         >
-                          +
-                        </button>
-                      </div>
-
-                      {!cards.length && (
-                        <p className="jd-empty">
-                          {search
-                            ? "No matching applications."
-                            : "No applications here yet."}
-                        </p>
-                      )}
-
-                      {cards.map(app => (
-                        <article
-                          className="jd-job"
-                          key={app.id}
-                          draggable={pendingId === null && !editing}
-                          aria-busy={pendingId === app.id}
-                          onDragStart={event => {
-                            event.dataTransfer.setData(
-                              "application/offerly-id",
-                              String(app.id)
-                            );
-                            event.dataTransfer.effectAllowed = "move";
-                          }}
-                          onDragEnd={() => setDragOver("")}
-                        >
-                          <button
-                            type="button"
-                            className="jd-job-open"
-                            disabled={pendingId !== null}
-                            onClick={() => openApplication(app)}
-                          >
-                            <span className="jd-company-row">
-                              <span className="jd-avatar" aria-hidden="true">
-                                {app.company?.charAt(0)?.toUpperCase() || "?"}
-                              </span>
-
-                              <span>{app.company || "Untitled company"}</span>
-                              <span className="jd-edit-hint">↗</span>
-                            </span>
-
-                            <strong className="jd-role">
-                              {app.role || "Untitled role"}
-                            </strong>
-
-                            <span className="jd-meta">
-                              {app.location || "Location not added"}
-                            </span>
-
-                            <span className="jd-meta">
-                              {formatDate(app.date_applied)}
-                            </span>
-                          </button>
-
-                          <div className="jd-card-footer">
+                          <span className="jd-company-row">
                             <span
-                              className={`jd-priority jd-priority-${
-                                String(app.priority || "Medium").toLowerCase()
-                              }`}
+                              className="jd-avatar"
+                              aria-hidden="true"
                             >
-                              {app.priority || "Medium"}
-                            </span>
-                          </div>
-
-                          <label className="jd-status-label">
-                            <span className="jd-sr-only">
-                              Status for {app.role} at {app.company}
+                              {app.company
+                                ?.charAt(0)
+                                ?.toUpperCase() || "?"}
                             </span>
 
-                            <select
-                              value={app.status}
-                              disabled={pendingId !== null}
-                              onChange={event =>
-                                changeStatus(app.id, event.target.value)
-                              }
-                            >
-                              {STAGES.map(option => (
-                                <option key={option.name}>
-                                  {option.name}
-                                </option>
-                              ))}
-                            </select>
-                          </label>
-                        </article>
-                      ))}
-                    </section>
-                  );
-                })}
+                            <span>
+                              {app.company || "Untitled company"}
+                            </span>
+
+                            <span className="jd-edit-hint">
+                              ↗
+                            </span>
+                          </span>
+
+                          <strong className="jd-role">
+                            {app.role || "Untitled role"}
+                          </strong>
+
+                          <span className="jd-meta">
+                            {app.location || "Location not added"}
+                          </span>
+
+                          <span className="jd-meta">
+                            {formatDate(app.date_applied)}
+                          </span>
+                        </button>
+
+                        <div className="jd-card-footer">
+                          <span
+                            className={`jd-priority jd-priority-${String(
+                              app.priority || "Medium"
+                            ).toLowerCase()}`}
+                          >
+                            {app.priority || "Medium"}
+                          </span>
+                        </div>
+
+                        <label className="jd-status-label">
+                          <span className="jd-sr-only">
+                            Status for {app.role} at {app.company}
+                          </span>
+
+                          <select
+                            value={app.status}
+                            disabled={pendingId !== null}
+                            onChange={event =>
+                              changeStatus(
+                                app.id,
+                                event.target.value
+                              )
+                            }
+                          >
+                            {STAGES.map(option => (
+                              <option
+                                key={option.name}
+                                value={option.name}
+                              >
+                                {option.name}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      </article>
+                    ))}
+                  </section>
+                );
+              })}
             </div>
           </section>
         </>
@@ -817,7 +1002,9 @@ export default function Dashboard() {
         <ApplicationModal
           application={editing}
           onClose={() => {
-            if (!mutationLock.current) setEditing(null);
+            if (!mutationLock.current) {
+              setEditing(null);
+            }
           }}
           onSave={saveApplication}
         />

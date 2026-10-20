@@ -485,15 +485,6 @@ async function markJobAsApplied() {
     return;
   }
 
-  const confirmed = confirm(
-    "Have you already submitted this application " +
-    "on the employer's website?\n\n" +
-    "This will mark the job as Applied in Offerly. " +
-    "It will NOT submit the application for you."
-  );
-
-  if (!confirmed) return;
-
   button.disabled = true;
   button.textContent = "Updating application...";
   setStatus("Marking application as Applied...");

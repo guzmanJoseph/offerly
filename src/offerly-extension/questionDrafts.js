@@ -7,9 +7,20 @@
   const mounted = new Map();
   let savedDescription = "";
   let requestInProgress = false;
+  let timer;
 
   const blocked =
-    /\b(salary|compensation|sponsorship|visa|citizenship|gender|ethnicity|disability|veteran|consent|signature|password|social security)\b/i;
+    /\b(salary|compensation|sponsorship|visa|citizenship|gender|ethnicity|disability|veteran|consent|signature|password|social security|work authorization)\b/i;
+
+  const writtenPrompt =
+    /cover[\s_-]*letter|\b(why|describe|explain|tell us|tell me|what interests|share an example|please provide|please share|additional information|anything else)\b/i;
+
+  function clean(value) {
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 2000);
+  }
 
   function visible(field) {
     if (!field?.isConnected) return false;
@@ -26,25 +37,110 @@
     );
   }
 
+  function textWithoutControls(element) {
+    if (!element) return "";
+
+    const copy = element.cloneNode(true);
+
+    copy.querySelectorAll(
+      "input, textarea, select, button, script, style, " +
+      "[data-offerly-draft-ui]"
+    ).forEach(node => node.remove());
+
+    return clean(copy.textContent);
+  }
+
   function questionFor(field) {
     const labels = [
       ...Array.from(
         field.labels || [],
         label => label.textContent
       ),
-      ...String(
-        field.getAttribute("aria-labelledby") || ""
-      )
+      ...String(field.getAttribute("aria-labelledby") || "")
         .split(/\s+/)
         .filter(Boolean)
         .map(id => document.getElementById(id)?.textContent),
       field.getAttribute("aria-label"),
-      field.getAttribute("placeholder"),
     ];
 
-    return String(
-      labels.find(value => String(value || "").trim()) || ""
-    ).trim().slice(0, 2000);
+    const direct = labels.map(clean).find(Boolean);
+    if (direct) return direct;
+
+    // Some forms show a label without connecting it to the input.
+    let container = field.parentElement;
+
+    for (let depth = 0; container && depth < 4; depth++) {
+      if (container.matches("form, main, body, html")) break;
+
+      const controls = container.querySelectorAll(
+        'textarea, input:not([type="hidden"]), select'
+      );
+
+      // Avoid borrowing a question from a neighboring field.
+      if (controls.length > 1) break;
+
+      const label = Array.from(
+        container.querySelectorAll(
+          "label, legend, [class*='question'], " +
+          "[class*='label'], [data-testid*='label']"
+        )
+      ).find(element =>
+        !element.closest("[data-offerly-draft-ui]") &&
+        clean(element.textContent)
+      );
+
+      if (label) return clean(label.textContent);
+
+      const nearby = textWithoutControls(container);
+
+      if (
+        nearby &&
+        nearby.length <= 1000 &&
+        writtenPrompt.test(nearby)
+      ) {
+        return nearby;
+      }
+
+      container = container.parentElement;
+    }
+
+    const previous = field.previousElementSibling;
+
+    if (
+      previous &&
+      !previous.matches("input, textarea, select, button") &&
+      !previous.querySelector("input, textarea, select")
+    ) {
+      const text = textWithoutControls(previous);
+      if (text && text.length <= 1000) return text;
+    }
+
+    return clean(field.getAttribute("placeholder"));
+  }
+
+  function applicationContext() {
+    if (
+      /greenhouse|ashbyhq|myworkdayjobs|myworkdaysite|jobs\.lever\.co/i
+        .test(location.hostname)
+    ) {
+      return true;
+    }
+
+    if (/careers?|jobs?|apply|application/i.test(location.pathname)) {
+      return true;
+    }
+
+    return Boolean(
+      document.querySelector(
+        'input[type="file"][accept*=".pdf"], ' +
+        'input[autocomplete="given-name"], ' +
+        '[data-automation-id="jobPostingDescription"], ' +
+        '[itemtype*="JobPosting"]'
+      ) &&
+      /\b(apply|application|resume|résumé)\b/i.test(
+        document.body?.innerText || ""
+      )
+    );
   }
 
   function detectDescription() {
@@ -52,15 +148,26 @@
       '[itemprop="description"]',
       "#job-description",
       "#job_description",
+      "#content .content",
       ".job-description",
       ".job__description",
       ".ashby-job-posting-description",
       '[data-testid="job-description"]',
+      '[data-automation-id="jobPostingDescription"]',
     ];
 
     for (const selector of selectors) {
       const element = document.querySelector(selector);
-      const value = element?.textContent?.trim();
+
+      // Do not treat the application form as a job description.
+      if (
+        !element ||
+        element.querySelector("textarea, input, select")
+      ) {
+        continue;
+      }
+
+      const value = element.textContent?.trim();
 
       if (value && value.length >= 80) {
         return value.slice(0, 14000);
@@ -70,7 +177,35 @@
     return savedDescription;
   }
 
-  function mount(field, question) {
+  function eligible(field, question) {
+    if (!visible(field) || !question || blocked.test(question)) {
+      return false;
+    }
+
+    if (
+      field.closest("[data-offerly-draft-ui]") ||
+      field.getAttribute("role") === "combobox" ||
+      field.getAttribute("aria-autocomplete")
+    ) {
+      return false;
+    }
+
+    // Exclude basic profile fields and unrelated comment boxes.
+    if (
+      /^(first name|last name|full name|email|phone|address|city|state|zip|linkedin|github|website|search|comment|message)\s*[:*]?$/i
+        .test(question)
+    ) {
+      return false;
+    }
+
+    return writtenPrompt.test(question) ||
+      (
+        field.tagName === "TEXTAREA" &&
+        applicationContext()
+      );
+  }
+
+  function mount(field) {
     const host = document.createElement("div");
     host.dataset.offerlyDraftUi = "true";
     field.insertAdjacentElement("afterend", host);
@@ -89,9 +224,9 @@
         button {
           font: inherit;
           padding: 7px 11px;
-          border: 1px solid #285de5;
+          border: 1px solid #7055ed;
           border-radius: 8px;
-          background: #285de5;
+          background: #7055ed;
           color: #fff;
           cursor: pointer;
         }
@@ -102,14 +237,15 @@
         }
 
         button:focus-visible {
-          outline: 3px solid #91b1ff;
+          outline: 3px solid #b8aaff;
           outline-offset: 2px;
         }
 
         p {
           margin: 6px 0 0;
-          color: #b42318;
-          background: #fff;
+          padding: 4px 6px;
+          color: #8a1c13;
+          background: #fff2f0;
           border-radius: 4px;
         }
 
@@ -128,30 +264,39 @@
     const button = shadow.getElementById("generate");
     const status = shadow.getElementById("status");
 
-    const coverLetter = /cover[\s_-]*letter/i.test(
-      `${question} ${field.name || ""} ${field.id || ""}`
-    );
+    function updateLabel() {
+      const coverLetter = /cover[\s_-]*letter/i.test(
+        `${questionFor(field)} ${field.name} ${field.id}`
+      );
 
-    const defaultLabel = coverLetter
-      ? "✦ Write cover letter"
-      : "✦ Draft with Offerly";
+      button.textContent = field.value.trim()
+        ? "✦ Rewrite with Offerly"
+        : coverLetter
+          ? "✦ Write cover letter"
+          : "✦ Draft with Offerly";
+    }
 
-    button.textContent = defaultLabel;
+    updateLabel();
 
     button.onclick = async () => {
       if (requestInProgress) {
-        status.textContent =
-          "Wait for the current draft to finish.";
+        status.textContent = "Wait for the current draft to finish.";
         return;
       }
 
       status.textContent = "";
 
-      if (!visible(field)) {
+      const question = questionFor(field);
+
+      if (!eligible(field, question)) {
         status.textContent =
-          "The application field changed. Refresh the page.";
+          "This field changed or is not a supported written question.";
         return;
       }
+
+      const coverLetter = /cover[\s_-]*letter/i.test(
+        `${question} ${field.name} ${field.id}`
+      );
 
       const originalValue = field.value;
 
@@ -166,7 +311,7 @@
 
       if (!jobDescription || jobDescription.length < 40) {
         const pasted = window.prompt(
-          "Paste the job description so Offerly can tailor your answers."
+          "Paste the job description so Offerly can tailor your answer."
         );
 
         if (pasted === null) return;
@@ -190,9 +335,7 @@
         const result = await chrome.runtime.sendMessage({
           type: "OFFERLY_DRAFT_REQUEST",
           payload: {
-            mode: coverLetter
-              ? "draftCoverLetter"
-              : "draftAnswer",
+            mode: coverLetter ? "draftCoverLetter" : "draftAnswer",
             question,
             company: "",
             role: "",
@@ -230,7 +373,6 @@
           );
         }
 
-        // Do not overwrite anything typed while AI was working.
         if (field.value !== originalValue) {
           throw new Error(
             "You edited this answer while the draft was generating. Your changes were kept."
@@ -264,16 +406,18 @@
         setter.call(field, draft);
 
         field.dispatchEvent(
-          new Event("input", { bubbles: true })
+          new Event("input", { bubbles: true, composed: true })
         );
 
         field.dispatchEvent(
-          new Event("change", { bubbles: true })
+          new Event("change", { bubbles: true, composed: true })
         );
 
-        if (field.value !== draft) {
+        await new Promise(resolve => setTimeout(resolve, 150));
+
+        if (!field.isConnected || field.value !== draft) {
           throw new Error(
-            "The website did not retain the answer."
+            "The page changed the answer field. Check whether your draft was retained."
           );
         }
 
@@ -284,9 +428,7 @@
       } finally {
         requestInProgress = false;
         button.disabled = false;
-        button.textContent = field.value.trim()
-          ? "✦ Rewrite with Offerly"
-          : defaultLabel;
+        updateLabel();
       }
     };
 
@@ -295,44 +437,73 @@
 
   function scan() {
     for (const [field, host] of mounted) {
-      if (!field.isConnected) {
+      if (
+        !field.isConnected ||
+        !host.isConnected ||
+        !eligible(field, questionFor(field))
+      ) {
         host.remove();
-        mounted.delete(field);
-      } else if (!host.isConnected) {
         mounted.delete(field);
       }
     }
 
+    // The manifest loads this script broadly. Only add UI on
+    // pages with application context.
+    if (!applicationContext()) return;
+
     for (const field of document.querySelectorAll(
-      'textarea, input[type="text"]'
+      'textarea, input[type="text"], input:not([type])'
     )) {
-      if (mounted.has(field) || !visible(field)) continue;
+      if (mounted.has(field)) continue;
 
       const question = questionFor(field);
+      if (!eligible(field, question)) continue;
 
-      if (!question || blocked.test(question)) continue;
-
-      const writtenQuestion =
-        field.tagName === "TEXTAREA" ||
-        /cover[\s_-]*letter|\b(why|describe|explain|tell us|tell me|what interests|share an example)\b/i
-          .test(question);
-
-      if (!writtenQuestion) continue;
-
-      mounted.set(field, mount(field, question));
+      mounted.set(field, mount(field));
     }
   }
 
-  let timer;
-
-  const observer = new MutationObserver(() => {
+  function scheduleScan() {
     clearTimeout(timer);
     timer = setTimeout(scan, 250);
+  }
+
+  const observer = new MutationObserver(records => {
+    const relevant = records.some(record => {
+      const element = record.target.nodeType === Node.ELEMENT_NODE
+        ? record.target
+        : record.target.parentElement;
+
+      if (element?.closest("[data-offerly-draft-ui]")) {
+        return false;
+      }
+
+      if (record.type !== "childList") return true;
+
+      const nodes = [
+        ...record.addedNodes,
+        ...record.removedNodes,
+      ];
+
+      return nodes.some(node =>
+        node.nodeType !== Node.ELEMENT_NODE ||
+        !node.matches("[data-offerly-draft-ui]")
+      );
+    });
+
+    if (relevant) scheduleScan();
   });
 
   observer.observe(document.documentElement, {
     childList: true,
     subtree: true,
+    characterData: true,
+    attributes: true,
+    attributeFilter: [
+      "hidden", "disabled", "readonly",
+      "aria-hidden", "aria-label", "aria-labelledby",
+      "class", "style",
+    ],
   });
 
   globalThis.offerlyQuestionDrafts = { scan };
