@@ -841,3 +841,74 @@ chrome.tabs.onRemoved.addListener(
     }
   }
 );
+
+// Written-answer requests from Offerly's injected editor.
+chrome.runtime.onMessage.addListener(
+  (message, sender, reply) => {
+    if (message?.type !== "OFFERLY_DRAFT_REQUEST") {
+      return false;
+    }
+
+    if (
+      sender.id !== chrome.runtime.id ||
+      !sender.tab?.id ||
+      sender.frameId !== 0 ||
+      !/^https:\/\//i.test(sender.url || "")
+    ) {
+      reply({ error: "Open an HTTPS job application page." });
+      return false;
+    }
+
+    (async () => {
+      const payload = message.payload;
+
+      if (
+        !payload ||
+        !["draftAnswer", "draftCoverLetter"].includes(payload.mode)
+      ) {
+        throw new Error("Invalid draft request.");
+      }
+
+      const session = await getSubmissionSession();
+
+      const response = await fetch(
+        `${OFFERLY_BASE}/functions/v1/offerly-ai-agent`,
+        {
+          method: "POST",
+          signal: AbortSignal.timeout(60_000),
+          headers: {
+            apikey: OFFERLY_KEY,
+            Authorization: `Bearer ${session.access_token}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            mode: payload.mode,
+            question: payload.question,
+            jobDescription: payload.jobDescription,
+            company: payload.company,
+            role: payload.role,
+            existingDraft: payload.existingDraft,
+            tone: payload.tone,
+            maxWords: payload.maxWords,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Could not generate a draft.");
+      }
+
+      return result;
+    })()
+      .then(reply)
+      .catch(error => {
+        reply({
+          error: error.message || "Could not generate a draft.",
+        });
+      });
+
+    return true;
+  }
+);

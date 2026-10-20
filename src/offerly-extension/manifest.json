@@ -1,9 +1,8 @@
-
 {
   "manifest_version": 3,
   "name": "Offerly",
-  "version": "1.0.1",
-  "description": "Your AI-powered job application assistant.",
+  "version": "1.0.2",
+  "description": "Fill basic information, attach your resume, and draft tailored application answers.",
   "minimum_chrome_version": "116",
   "permissions": [
     "activeTab",
@@ -15,6 +14,23 @@
   ],
   "host_permissions": [
     "<all_urls>"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://greenhouse.io/*",
+        "https://*.greenhouse.io/*",
+        "https://ashbyhq.com/*",
+        "https://*.ashbyhq.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.myworkdaysite.com/*",
+        "https://jobs.lever.co/*"
+      ],
+      "js": [
+        "questionDrafts.js"
+      ],
+      "run_at": "document_idle"
+    }
   ],
   "background": {
     "service_worker": "background.js"

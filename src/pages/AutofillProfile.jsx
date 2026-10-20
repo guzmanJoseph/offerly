@@ -1,230 +1,152 @@
-
 import { useEffect, useState } from "react";
 import "../styles/autofill-profile.css";
-import "../styles/autofill-accordion.css";
 
 import {
   loadAutofillProfile,
-  saveAutofillProfile
+  saveAutofillProfile,
 } from "../lib/autofillStorage";
 
 import {
   readResume,
-  parseAutofillResume
+  parseAutofillResume,
 } from "../lib/autofillParser";
 
-import {
-  ProfileField,
-  ProfileDropdown,
-  RepeatableSection
-} from "../components/AutofillFields";
-
-import AccordionSection from "../components/AccordionSection";
 import ResumeManager from "../components/ResumeManager";
-import SelfIdentification from "../components/SelfIdentification";
 
-import ApplicationQuestions, {
-  DEFAULT_APPLICATION_ANSWERS
-} from "../components/ApplicationQuestions";
-
-const emptyProfile = () => ({
+const EMPTY = {
   firstName: "",
-  middleName: "",
   lastName: "",
   preferredName: "",
   email: "",
   phone: "",
-  phoneCountry: "",
   addressLine1: "",
   addressLine2: "",
   city: "",
   state: "",
   postalCode: "",
   country: "",
-  location: "",
-  citizenship: "",
-  preferredContactMethod: "",
   linkedin: "",
   github: "",
   website: "",
-
   education: [],
   experience: [],
   projects: [],
   skills: "",
-  certifications: [],
-  languages: [],
-
   professionalSummary: "",
-  careerMotivation: "",
-  keyAchievements: "",
-  projectExample: "",
-  technicalExperience: "",
+};
 
-  preferredJobTitles: "",
-  preferredIndustries: "",
-  hourlyRateExpectation: "",
-  salaryMinimumPrivate: "",
-  otherWorkCountries: "",
-  workPermitExpiration: "",
-  activeClearance: "",
+const CONTACT_FIELDS = [
+  ["First name", "firstName"],
+  ["Last name", "lastName"],
+  ["Email", "email", "email"],
+  ["Phone", "phone", "tel"],
+];
 
-  ...DEFAULT_APPLICATION_ANSWERS
-});
-
-const PERSONAL_FIELDS = [
-  ["Legal first name", "firstName"],
-  ["Middle name", "middleName"],
-  ["Legal last name", "lastName"],
-  ["Preferred name", "preferredName"],
-  ["Email address", "email"],
-  ["Phone number", "phone"],
-  ["Phone country / calling code", "phoneCountry"],
+const ADDRESS_FIELDS = [
   ["Street address", "addressLine1"],
   ["Apartment / unit", "addressLine2"],
   ["City", "city"],
   ["State / province", "state"],
   ["ZIP / postal code", "postalCode"],
-  ["Country of residence", "country"],
+  ["Country", "country"],
+];
+
+const LINK_FIELDS = [
   ["LinkedIn", "linkedin"],
   ["GitHub", "github"],
   ["Portfolio / website", "website"],
-  ["Country of citizenship (optional)", "citizenship"]
 ];
 
-const EDUCATION_FIELDS = [
-  ["School or university", "school"],
-  ["School location (original)", "location"],
-  ["School city", "city"],
-  ["School state / province", "state"],
-  ["School country", "country"],
-  ["Education level", "educationLevel"],
-  ["Degree type (BS, BA, MS)", "degreeType"],
-  ["Degree / major", "degree"],
-  ["Minor / concentration", "minor"],
-  ["Start date (MM/YYYY)", "startDate"],
-  ["Graduation / end date (MM/YYYY)", "endDate"],
-  ["Expected or completed", "graduationStatus"],
-  ["Currently enrolled (Yes / No)", "currentlyEnrolled"],
-  ["Original resume dates", "date"],
-  ["GPA", "gpa"],
-  ["GPA scale", "gpaScale"],
-  ["Relevant coursework", "coursework", true]
+const SECTIONS = [
+  {
+    key: "education",
+    title: "Education",
+    item: "school",
+    fields: [
+      ["School", "school"],
+      ["Degree type, e.g. BS", "degreeType"],
+      ["Major / field of study", "degree"],
+      ["Start date · MM/YYYY", "startDate"],
+      ["Graduation date · MM/YYYY", "endDate"],
+    ],
+  },
+  {
+    key: "experience",
+    title: "Experience",
+    item: "experience",
+    fields: [
+      ["Company", "company"],
+      ["Job title", "jobTitle"],
+      ["Start date · MM/YYYY", "startDate"],
+      ["End date · MM/YYYY or Present", "endDate"],
+      ["What you did and achieved", "description", "textarea"],
+    ],
+  },
+  {
+    key: "projects",
+    title: "Projects",
+    item: "project",
+    fields: [
+      ["Project name", "name"],
+      ["What you built and your contribution", "description", "textarea"],
+    ],
+  },
 ];
 
-const EXPERIENCE_FIELDS = [
-  ["Company", "company"],
-  ["Company location (original)", "location"],
-  ["Job title", "jobTitle"],
-  ["Employment type", "employmentType"],
-  ["City", "city"],
-  ["State / province", "state"],
-  ["Country", "country"],
-  ["Work arrangement", "workArrangement"],
-  ["Start date (MM/YYYY)", "startDate"],
-  ["End date (MM/YYYY)", "endDate"],
-  ["Currently employed (Yes / No)", "current"],
-  ["Original resume dates", "date"],
-  ["Reason for leaving (optional)", "reasonForLeaving"],
-  ["Responsibilities and accomplishments", "description", true]
-];
+function normalizeProfile(value) {
+  const source =
+    value && typeof value === "object" && !Array.isArray(value)
+      ? value
+      : {};
 
-const PROJECT_FIELDS = [
-  ["Project name", "name"],
-  ["Date", "date"],
-  ["Description", "description", true]
-];
+  // Preserve existing saved fields even when they
+  // are no longer displayed on this page.
+  const result = { ...EMPTY, ...source };
 
-const CERTIFICATION_FIELDS = [
-  ["Certification / license", "name"],
-  ["Issuing organization", "issuer"],
-  ["Issue date", "issued"],
-  ["Expiration date", "expires"],
-  ["Credential URL", "url"]
-];
+  for (const key of ["education", "experience", "projects"]) {
+    result[key] = Array.isArray(source[key])
+      ? source[key].filter(
+          entry =>
+            entry &&
+            typeof entry === "object" &&
+            !Array.isArray(entry)
+        )
+      : [];
+  }
 
-const LANGUAGE_FIELDS = [
-  ["Language", "name"],
-  ["Proficiency", "proficiency"]
-];
+  return result;
+}
 
-const STORY_FIELDS = [
-  ["Professional summary", "professionalSummary"],
-  ["Why these roles interest you", "careerMotivation"],
-  ["Key achievements with real metrics", "keyAchievements"],
-  ["A challenging project you solved", "projectExample"],
-  ["Technical experience", "technicalExperience"]
-];
-
-const PREFERENCE_FIELDS = [
-  ["Preferred job titles", "preferredJobTitles"],
-  ["Preferred industries", "preferredIndustries"],
-  ["Expected hourly rate (USD)", "hourlyRateExpectation"],
-  ["Private minimum salary (never auto-disclose)", "salaryMinimumPrivate"],
-  ["Other countries where authorized to work", "otherWorkCountries"],
-  ["Work permit expiration (if applicable)", "workPermitExpiration"]
-];
-
-const EDUCATION_EMPTY =
-  Object.fromEntries(EDUCATION_FIELDS.map(([, key]) => [key, ""]));
-
-const EXPERIENCE_EMPTY =
-  Object.fromEntries(EXPERIENCE_FIELDS.map(([, key]) => [key, ""]));
-
-const PROJECT_EMPTY = {
-  name: "",
-  date: "",
-  description: ""
-};
-
-const CERTIFICATION_EMPTY =
-  Object.fromEntries(CERTIFICATION_FIELDS.map(([, key]) => [key, ""]));
-
-const LANGUAGE_EMPTY = {
-  name: "",
-  proficiency: ""
-};
-
-export default function AutofillProfile({
-  onboarding = false,
-  onProfileSaved
-}) {
-  const [profile, setProfile] = useState(emptyProfile);
-  const [fileName, setFileName] = useState("");
-  const [status, setStatus] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [parsed, setParsed] = useState(false);
+export default function AutofillProfile() {
+  const [profile, setProfile] = useState(() => normalizeProfile(null));
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [loadingSaved, setLoadingSaved] = useState(true);
-  const [saveMessage, setSaveMessage] = useState("");
+  const [importing, setImporting] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
   const [lastSaved, setLastSaved] = useState(null);
+  const [dirty, setDirty] = useState(false);
 
   useEffect(() => {
     let active = true;
 
     async function load() {
       try {
-        const saved = await loadAutofillProfile();
+        const record = await loadAutofillProfile();
 
         if (!active) return;
 
-        if (saved?.profile_data) {
-          setProfile({
-            ...emptyProfile(),
-            ...saved.profile_data
-          });
-
-          setLastSaved(saved.updated_at);
-          setSaveMessage("Your saved profile has been loaded.");
-        }
-      } catch (error) {
+        setProfile(normalizeProfile(record?.profile_data));
+        setLastSaved(record?.updated_at || null);
+      } catch (err) {
         if (active) {
-          setSaveMessage(
-            `Could not load your profile: ${error.message}`
+          setLoadError(
+            err.message || "Could not load your profile."
           );
         }
       } finally {
-        if (active) setLoadingSaved(false);
+        if (active) setLoading(false);
       }
     }
 
@@ -235,503 +157,500 @@ export default function AutofillProfile({
     };
   }, []);
 
-  function update(name, value) {
-    setProfile(previous => ({
-      ...previous,
-      [name]: value
-    }));
-  }
+  useEffect(() => {
+    if (!dirty) return;
 
-  function updateItem(bucket, index, name, value) {
-    setProfile(previous => ({
-      ...previous,
-      [bucket]: (previous[bucket] || []).map((item, i) =>
-        index === i ? { ...item, [name]: value } : item
-      )
-    }));
-  }
+    function warnBeforeLeaving(event) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
 
-  function addItem(bucket, shape) {
-    setProfile(previous => ({
-      ...previous,
-      [bucket]: [...(previous[bucket] || []), { ...shape }]
-    }));
-  }
+    window.addEventListener("beforeunload", warnBeforeLeaving);
 
-  function removeItem(bucket, index) {
-    setProfile(previous => ({
-      ...previous,
-      [bucket]: (previous[bucket] || [])
-        .filter((_, i) => i !== index)
-    }));
-  }
-
-  async function handleSaveProfile() {
-    if (loadingSaved || saving) return;
-
-    // Require only basics for first-time setup.
-    // Other details can always be completed later.
-    if (onboarding && (
-      !profile.firstName?.trim() ||
-      !profile.lastName?.trim() ||
-      !profile.email?.trim()
-    )) {
-      setSaveMessage(
-        "To finish setup, enter your first name, last name, and email."
+    return () => {
+      window.removeEventListener(
+        "beforeunload",
+        warnBeforeLeaving
       );
+    };
+  }, [dirty]);
+
+  function markChanged() {
+    setDirty(true);
+    setMessage("");
+    setError("");
+  }
+
+  function update(key, value) {
+    setProfile(previous => ({
+      ...previous,
+      [key]: value,
+    }));
+
+    markChanged();
+  }
+
+  function updateEntry(bucket, index, key, value) {
+    setProfile(previous => ({
+      ...previous,
+      [bucket]: previous[bucket].map((entry, i) =>
+        i === index ? { ...entry, [key]: value } : entry
+      ),
+    }));
+
+    markChanged();
+  }
+
+  function addEntry(section) {
+    const entry = Object.fromEntries(
+      section.fields.map(([, key]) => [key, ""])
+    );
+
+    setProfile(previous => ({
+      ...previous,
+      [section.key]: [...previous[section.key], entry],
+    }));
+
+    markChanged();
+  }
+
+  function removeEntry(bucket, index) {
+    setProfile(previous => ({
+      ...previous,
+      [bucket]: previous[bucket].filter((_, i) => i !== index),
+    }));
+
+    markChanged();
+  }
+
+  async function importResume(event) {
+    const input = event.target;
+    const file = input.files?.[0];
+
+    input.value = "";
+
+    if (!file || importing || saving) return;
+
+    setMessage("");
+    setError("");
+
+    if (
+      !/\.(pdf|docx|txt)$/i.test(file.name) ||
+      file.size === 0 ||
+      file.size > 5 * 1024 * 1024
+    ) {
+      setError("Choose a PDF, DOCX, or TXT file up to 5 MB.");
       return;
     }
 
+    if (
+      !window.confirm(
+        "Importing may replace profile fields with information from this résumé. Continue?"
+      )
+    ) {
+      return;
+    }
+
+    setImporting(true);
+
+    try {
+      const resumeText = await readResume(file);
+
+      if (!resumeText?.trim()) {
+        throw new Error("No readable résumé text was found.");
+      }
+
+      const extracted = await parseAutofillResume(resumeText);
+
+      if (
+        !extracted ||
+        typeof extracted !== "object" ||
+        Array.isArray(extracted)
+      ) {
+        throw new Error("The résumé parser returned an invalid result.");
+      }
+
+      // Only import fields used by the simplified profile.
+      const imported = {};
+
+      for (const key of Object.keys(EMPTY)) {
+        const value = extracted[key];
+
+        if (Array.isArray(EMPTY[key])) {
+          if (Array.isArray(value) && value.length) {
+            imported[key] = value.filter(
+              entry =>
+                entry &&
+                typeof entry === "object" &&
+                !Array.isArray(entry)
+            );
+          }
+        } else if (typeof value === "string" && value.trim()) {
+          imported[key] = value.trim();
+        }
+      }
+
+      if (!Object.keys(imported).length) {
+        throw new Error(
+          "No profile details were found. You can enter them below."
+        );
+      }
+
+      setProfile(previous =>
+        normalizeProfile({ ...previous, ...imported })
+      );
+
+      setDirty(true);
+      setMessage(
+        `Imported ${file.name}. Review your details below, then save.`
+      );
+    } catch (err) {
+      setError(err.message || "Could not import your résumé.");
+    } finally {
+      setImporting(false);
+    }
+  }
+
+  async function saveProfile() {
+    if (loading || loadError || saving || importing) return;
+
     setSaving(true);
-    setSaveMessage("");
+    setMessage("");
+    setError("");
 
     try {
       const result = await saveAutofillProfile(profile);
 
       setLastSaved(result.updated_at);
-      setSaveMessage("Profile saved successfully!");
-
-      // Notify App.jsx so first-time users can
-      // enter the dashboard immediately.
-      if (typeof onProfileSaved === "function") {
-        onProfileSaved();
-      }
-    } catch (error) {
-      setSaveMessage(
-        `Unable to save profile: ${error.message}`
-      );
+      setDirty(false);
+      setMessage("Your profile is saved.");
+    } catch (err) {
+      setError(err.message || "Could not save your profile.");
     } finally {
       setSaving(false);
     }
   }
 
-  function handleResumeProfileCleared(result) {
-    if (!result?.profile_data) return;
+  function handleProfileCleared(record) {
+    if (!record?.profile_data) return;
 
-    setProfile({
-      ...emptyProfile(),
-      ...result.profile_data
-    });
+    // The manager saves its own changes. Preserve local
+    // edits to fields that the clearing operation did not change.
+    setProfile(previous => {
+      const next = { ...previous };
 
-    setFileName("");
-    setParsed(false);
-    setLastSaved(result.updated_at);
+      const clearedKeys = [
+        "firstName", "lastName", "email", "phone",
+        "location", "linkedin", "github", "website",
+        "education", "experience", "skills", "projects",
+      ];
 
-    setStatus(
-      "Resume information cleared. Changes saved."
-    );
-  }
-
-  async function handleFile(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setBusy(true);
-    setStatus("Reading your resume...");
-
-    try {
-      const text = await readResume(file);
-
-      if (!text.trim()) {
-        throw new Error("No readable resume text found.");
+      for (const key of clearedKeys) {
+        if (key in record.profile_data) {
+          next[key] = record.profile_data[key];
+        }
       }
 
-      const extracted = await parseAutofillResume(text);
+      return normalizeProfile(next);
+    });
 
-      // Keep other saved profile values.
-      // Only replace extracted resume fields.
-      setProfile(previous => ({
-        ...previous,
-        ...Object.fromEntries(
-          Object.entries(extracted).filter(([key, value]) => {
-            if (["education", "experience", "projects"]
-              .includes(key)) {
-              return Array.isArray(value) && value.length > 0;
-            }
-
-            return value !== null &&
-              value !== undefined &&
-              value !== "";
-          })
-        ),
-
-        website: previous.website,
-        linkedin: extracted.linkedin || previous.linkedin,
-        github: extracted.github || previous.github
-      }));
-
-      setFileName(file.name);
-      setParsed(true);
-      setStatus(
-        "Resume imported. Review the fields and save."
-      );
-    } catch (error) {
-      setStatus(error.message || "Resume import failed.");
-    } finally {
-      setBusy(false);
-      event.target.value = "";
-    }
+    setLastSaved(record.updated_at);
+    setMessage(
+      "Résumé information cleared. Save any other edits when ready."
+    );
+    setError("");
   }
 
-  const basicFields = [
-    "firstName", "lastName", "email", "phone",
-    "city", "state", "country", "postalCode",
-    "linkedin", "github", "website", "skills"
-  ];
-
-  const completedBasics = basicFields.filter(
-    key => String(profile[key] || "").trim()
-  ).length;
-
-  const progress = Math.round(
-    completedBasics / basicFields.length * 100
-  );
-
-  function renderFields(fields, multiline = false) {
+  function renderFields(fields, values, onChange, prefix) {
     return (
-      <div className="af-grid">
-        {fields.map(([label, name, isMultiline]) => (
-          <ProfileField
-            key={name}
-            label={label}
-            name={name}
-            value={profile[name] ?? ""}
-            onChange={update}
-            multiline={multiline || Boolean(isMultiline)}
-            needsReview={
-              parsed &&
-              ["firstName", "lastName", "email", "phone"]
-                .includes(name)
-            }
-          />
-        ))}
+      <div className="op-grid">
+        {fields.map(([label, key, type]) => {
+          const id = `${prefix}-${key}`;
+
+          return (
+            <div
+              className={type === "textarea" ? "op-field op-wide" : "op-field"}
+              key={key}
+            >
+              <label htmlFor={id}>{label}</label>
+
+              {type === "textarea" ? (
+                <textarea
+                  id={id}
+                  rows={4}
+                  value={values[key] ?? ""}
+                  onChange={event => onChange(key, event.target.value)}
+                />
+              ) : (
+                <input
+                  id={id}
+                  type={type || "text"}
+                  value={values[key] ?? ""}
+                  onChange={event => onChange(key, event.target.value)}
+                />
+              )}
+            </div>
+          );
+        })}
       </div>
     );
   }
 
-  function renderRepeatable(
-    title,
-    bucket,
-    fields,
-    shape
-  ) {
+  if (loading) {
     return (
-      <RepeatableSection
-        title={title}
-        entries={profile[bucket] || []}
-        fields={fields}
-        needsReview={parsed}
-        onAdd={() => addItem(bucket, shape)}
-        onUpdate={(index, key, value) =>
-          updateItem(bucket, index, key, value)
-        }
-        onRemove={index => removeItem(bucket, index)}
-      />
+      <div className="op-page" role="status">
+        Loading your profile…
+      </div>
     );
   }
 
+  if (loadError) {
+    return (
+      <div className="op-page">
+        <h1>Your profile</h1>
+        <p role="alert">{loadError}</p>
+        <button
+          type="button"
+          className="op-button"
+          onClick={() => window.location.reload()}
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const locked = saving || importing;
+
   return (
-    <div className="page af-page">
-      <header className="page-header">
-        <h1>
-          {onboarding
-            ? "Set Up Your Autofill Profile"
-            : "Autofill Profile"}
-        </h1>
-        <p>
-          Complete your profile once so Offerly can
-          help fill job applications faster.
-        </p>
+    <div className="op-page">
+      <header className="op-header">
+        <div>
+          <span className="op-eyebrow">YOUR OFFERLY PROFILE</span>
+          <h1>Less setup. Less typing.</h1>
+          <p>
+            Import your résumé, check your details, and save.
+            Everything can be updated later.
+          </p>
+        </div>
       </header>
 
-      {onboarding && (
-        <div className="af-onboarding-banner">
-          <h2>Welcome to Offerly!</h2>
+      <fieldset className="op-form" disabled={locked}>
+        <section className="op-card">
+          <div className="op-heading">
+            <span className="op-number">1</span>
+            <div>
+              <h2>Start with your résumé</h2>
+              <p>Optional · Populate your profile without typing it all.</p>
+            </div>
+          </div>
+
+          <div className="op-import">
+            <div>
+              <strong>Import your information</strong>
+              <p>PDF, DOCX, or TXT · Up to 5 MB</p>
+            </div>
+
+            <label className="op-upload">
+              Choose résumé
+              <input
+                type="file"
+                accept=".pdf,.docx,.txt"
+                onChange={importResume}
+              />
+            </label>
+          </div>
+
+          <details className="op-details">
+            <summary>Manage files and choose a default résumé</summary>
+            <p className="op-note">
+              Importing fills your profile. Use the file manager
+              below to store the résumé your extension attaches.
+              Attachment supports PDF and DOCX.
+            </p>
+
+            <div className="op-resume-manager">
+  <ResumeManager
+    onProfileCleared={handleProfileCleared}
+  />
+</div>
+          </details>
+        </section>
+
+        <section className="op-card">
+          <div className="op-heading">
+            <span className="op-number">2</span>
+            <div>
+              <h2>Your basic information</h2>
+              <p>Used for contact fields on applications.</p>
+            </div>
+          </div>
+
+          {renderFields(
+            CONTACT_FIELDS,
+            profile,
+            update,
+            "contact"
+          )}
+
+          <details className="op-details">
+            <summary>Address · optional</summary>
+            {renderFields(
+              ADDRESS_FIELDS,
+              profile,
+              update,
+              "address"
+            )}
+          </details>
+
+          <details className="op-details">
+            <summary>Profile links · optional</summary>
+            {renderFields(
+              LINK_FIELDS,
+              profile,
+              update,
+              "links"
+            )}
+          </details>
+        </section>
+
+        <section className="op-card">
+          <div className="op-heading">
+            <span className="op-number">3</span>
+            <div>
+              <h2>Background for better answers</h2>
+              <p>
+                Add real experience so Offerly can tailor drafts to you.
+                Complete whichever sections apply.
+              </p>
+            </div>
+          </div>
+
+          <div className="op-field">
+            <label htmlFor="profile-skills">Skills</label>
+            <textarea
+              id="profile-skills"
+              rows={2}
+              placeholder="For example: React, Excel, project management"
+              value={profile.skills ?? ""}
+              onChange={event => update("skills", event.target.value)}
+            />
+          </div>
+
+          {SECTIONS.map(section => (
+            <details
+              className="op-details"
+              key={section.key}
+            >
+              <summary>
+                {section.title}
+                <span className="op-count">
+                  {profile[section.key].length}
+                </span>
+              </summary>
+
+              {section.key === "education" &&
+                profile.education.length > 1 && (
+                  <p className="op-note">
+                    AI drafts can use all these schools. Basic
+                    autofill skips education when multiple
+                    schools are saved.
+                  </p>
+                )}
+
+              {profile[section.key].map((entry, index) => (
+                <div className="op-entry" key={index}>
+                  <div className="op-entry-head">
+                    <strong>
+                      {entry.school ||
+                        entry.company ||
+                        entry.name ||
+                        `${section.title} ${index + 1}`}
+                    </strong>
+
+                    <button
+                      type="button"
+                      className="op-remove"
+                      aria-label={`Remove ${section.item} ${index + 1}`}
+                      onClick={() => removeEntry(section.key, index)}
+                    >
+                      Remove
+                    </button>
+                  </div>
+
+                  {renderFields(
+                    section.fields,
+                    entry,
+                    (key, value) =>
+                      updateEntry(section.key, index, key, value),
+                    `${section.key}-${index}`
+                  )}
+                </div>
+              ))}
+
+              <button
+                type="button"
+                className="op-add"
+                onClick={() => addEntry(section)}
+              >
+                + Add {section.item}
+              </button>
+            </details>
+          ))}
+
+          <details className="op-details">
+            <summary>Anything else? · optional</summary>
+            <div className="op-field">
+              <label htmlFor="profile-summary">
+                Achievements, career interests, or useful background
+              </label>
+              <textarea
+                id="profile-summary"
+                rows={4}
+                placeholder="Share details you’d like Offerly to draw on."
+                value={profile.professionalSummary ?? ""}
+                onChange={event =>
+                  update("professionalSummary", event.target.value)
+                }
+              />
+            </div>
+          </details>
+        </section>
+      </fieldset>
+
+      <footer className="op-savebar">
+        <div>
+          <strong>
+            {importing
+              ? "Reading your résumé…"
+              : dirty
+                ? "You have unsaved changes"
+                : "Your profile"}
+          </strong>
           <p>
-            Start by importing your resume or entering
-            your information. Open each section to edit it.
-            Only your name and email are required to finish
-            setup. You can return to fill in more later.
+            {lastSaved
+              ? `Last saved ${new Date(lastSaved).toLocaleString()}`
+              : "Save once to use this information in the extension."}
           </p>
         </div>
+
+        <button
+          type="button"
+          className="op-button"
+          onClick={saveProfile}
+          disabled={locked}
+        >
+          {saving ? "Saving…" : "Save profile"}
+        </button>
+      </footer>
+
+      {message && (
+        <p className="op-message" role="status">{message}</p>
       )}
 
-      <section className="af-card">
-        <div className="af-section-head">
-          <h2>Profile completeness</h2>
-          <strong>{progress}%</strong>
-        </div>
-
-        <div
-          className="af-profile-progress"
-          role="progressbar"
-          aria-valuenow={progress}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label="Basic profile completeness"
-        >
-          <div style={{ width: `${progress}%` }} />
-        </div>
-
-        <p className="af-muted">
-          Based on 12 commonly used profile fields.
-          Optional fields can be added anytime.
-        </p>
-      </section>
-
-      {/* Keep resume import easy to find. */}
-
-      <section className="af-card af-upload">
-        <h2>Import Your Resume</h2>
-
-        <p className="af-muted">
-          Upload a PDF, DOCX, or TXT file, up to 5 MB.
-          Review the extracted information before saving.
-        </p>
-
-        <label className="af-upload-label">
-          {busy ? "Processing..." : "Choose resume"}
-
-          <input
-            type="file"
-            accept=".pdf,.docx,.txt"
-            disabled={busy}
-            onChange={handleFile}
-          />
-        </label>
-
-        {fileName && (
-          <p className="af-muted">
-            Selected: {fileName}
-          </p>
-        )}
-
-        {status && (
-          <p className="af-status" role="status">
-            {status}
-          </p>
-        )}
-      </section>
-
-      <ResumeManager
-        onProfileCleared={handleResumeProfileCleared}
-      />
-
-      <AccordionSection
-        title="Personal Information"
-        description="Name, contact details, complete address, links"
-        icon="👤"
-        defaultOpen
-      >
-        <p className="af-muted">
-          Information used for contact fields and
-          addresses on job applications.
-        </p>
-
-        {renderFields(PERSONAL_FIELDS)}
-
-        <div className="af-grid" style={{ marginTop: 16 }}>
-          <ProfileDropdown
-            label="Preferred contact method"
-            name="preferredContactMethod"
-            value={profile.preferredContactMethod}
-            options={["Email", "Phone", "Either"]}
-            onChange={update}
-          />
-        </div>
-
-        <div style={{ marginTop: 16 }}>
-          <ProfileField
-            label="Previous combined city / state (legacy)"
-            name="location"
-            value={profile.location}
-            onChange={update}
-          />
-        </div>
-      </AccordionSection>
-
-      <AccordionSection
-        title="Education"
-        description="Schools, degree, graduation dates, GPA"
-        icon="🎓"
-      >
-        {renderRepeatable(
-          "Education",
-          "education",
-          EDUCATION_FIELDS,
-          EDUCATION_EMPTY
-        )}
-      </AccordionSection>
-
-      <AccordionSection
-        title="Work Experience"
-        description="Jobs, companies, locations, accomplishments"
-        icon="💼"
-      >
-        {renderRepeatable(
-          "Work Experience",
-          "experience",
-          EXPERIENCE_FIELDS,
-          EXPERIENCE_EMPTY
-        )}
-      </AccordionSection>
-
-      <AccordionSection
-        title="Skills"
-        description="Programming languages, software, technical skills"
-        icon="🛠️"
-      >
-        {renderFields([["Skills", "skills", true]])}
-      </AccordionSection>
-
-      <AccordionSection
-        title="Projects"
-        description="Portfolio projects and work examples"
-        icon="📁"
-      >
-        {renderRepeatable(
-          "Projects",
-          "projects",
-          PROJECT_FIELDS,
-          PROJECT_EMPTY
-        )}
-      </AccordionSection>
-
-      <AccordionSection
-        title="Certifications and Licenses"
-        description="Credentials, organizations, expiration dates"
-        icon="🏅"
-      >
-        {renderRepeatable(
-          "Certifications and Licenses",
-          "certifications",
-          CERTIFICATION_FIELDS,
-          CERTIFICATION_EMPTY
-        )}
-      </AccordionSection>
-
-      <AccordionSection
-        title="Languages"
-        description="Languages and proficiency levels"
-        icon="🌐"
-      >
-        {renderRepeatable(
-          "Languages",
-          "languages",
-          LANGUAGE_FIELDS,
-          LANGUAGE_EMPTY
-        )}
-      </AccordionSection>
-
-      <AccordionSection
-        title="Professional Background"
-        description="Real accomplishments and stories for AI-generated drafts"
-        icon="📝"
-      >
-        <p className="af-muted">
-          These details help AI prepare answers to
-          open-ended questions. Review each draft
-          before sending it to an employer.
-        </p>
-
-        {renderFields(STORY_FIELDS, true)}
-      </AccordionSection>
-
-      <AccordionSection
-        title="Additional Job Preferences"
-        description="Roles, industries, pay, work authorization details"
-        icon="⚙️"
-      >
-        {renderFields(PREFERENCE_FIELDS)}
-
-        <div className="af-grid" style={{ marginTop: 16 }}>
-          <ProfileDropdown
-            label="Is your clearance currently active?"
-            name="activeClearance"
-            value={profile.activeClearance}
-            options={["Yes", "No", "Not applicable"]}
-            onChange={update}
-          />
-        </div>
-
-        <p className="af-muted">
-          Your private minimum salary should not be
-          automatically disclosed to employers.
-        </p>
-      </AccordionSection>
-
-      <AccordionSection
-        title="Application Questions"
-        description="Work eligibility, age 18+, sponsorship, relocation and more"
-        icon="📋"
-      >
-        <ApplicationQuestions
-          profile={profile}
-          update={update}
-        />
-      </AccordionSection>
-
-      <AccordionSection
-        title="Voluntary Self-Identification"
-        description="Optional demographics, veteran and disability preferences"
-        icon="🔒"
-      >
-        <p className="af-muted">
-          This information is optional and saved
-          separately. You can leave it unanswered.
-        </p>
-
-        <SelfIdentification />
-      </AccordionSection>
-
-      {/* Save stays visible at the bottom. */}
-
-      <section className="af-card">
-        <h2>
-          {onboarding
-            ? "Finish Setting Up Offerly"
-            : "Save Autofill Profile"}
-        </h2>
-
-        <p className="af-muted">
-          Your information will be saved securely to
-          your Offerly account. You can edit it anytime.
-        </p>
-
-        {lastSaved && (
-          <p className="af-muted">
-            Last saved:{" "}
-            {new Date(lastSaved).toLocaleString()}
-          </p>
-        )}
-
-        {saveMessage && (
-          <p className="af-status" role="status">
-            {saveMessage}
-          </p>
-        )}
-
-        <div className="af-save-actions">
-          <button
-            type="button"
-            className="af-secondary"
-            onClick={handleSaveProfile}
-            disabled={saving || loadingSaved || busy}
-          >
-            {loadingSaved
-              ? "Loading..."
-              : saving
-                ? "Saving..."
-                : onboarding
-                  ? "Save and Continue to Dashboard"
-                  : "Save Profile"}
-          </button>
-
-          <span className="af-save-hint">
-            You can edit your profile later.
-          </span>
-        </div>
-      </section>
+      {error && (
+        <p className="op-error" role="alert">{error}</p>
+      )}
     </div>
   );
 }

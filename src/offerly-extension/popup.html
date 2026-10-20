@@ -1,86 +1,155 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="popup.css" />
   <title>Offerly</title>
+  <link rel="stylesheet" href="sidepanel.css" />
 </head>
+
 <body>
-  <main class="popup">
-    <div class="brand">
-      <img src="offerly.png" alt="" class="logo" />
-      <div>
-        <h2>Offerly</h2>
-        <p>Your job search companion</p>
-      </div>
-    </div>
-
-    <section id="loginView">
-      <h3>Connect your account</h3>
-      <input id="emailInput" type="email" placeholder="Email" />
-      <input id="passwordInput" type="password" placeholder="Password" />
-      <button id="loginBtn" type="button">Log in</button>
-      <p id="loginStatus" role="status"></p>
-    </section>
-
-    <section id="saveView" class="hidden">
-      <div class="job-card">
-        <div class="job-card-heading">
-          <span>Detected job</span>
-          <span id="saveBadge" class="save-badge">Checking...</span>
+  <div class="app-shell">
+    <header class="app-header">
+      <div class="brand">
+        <img src="offerly.png" alt="" class="logo" />
+        <div>
+          <h1>Offerly</h1>
+          <p>Your application assistant</p>
         </div>
-
-        <label for="company">Company</label>
-        <input id="company" placeholder="Detecting company..." />
-
-        <label for="role">Job title</label>
-        <input id="role" placeholder="Detecting role..." />
-
-        <label for="location">Location</label>
-        <input id="location" placeholder="Detecting location..." />
-
-        <a
-          id="jobLink"
-          href="#"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="job-link hidden"
-        >
-          View job posting ↗
-        </a>
       </div>
+      <a
+        class="dashboard-link"
+        href="https://www.offerlyjob.com/dashboard"
+        target="_blank"
+        rel="noopener noreferrer"
+      >Dashboard ↗</a>
+    </header>
 
-      <div class="autofill-card">
-        <h3>Ready to apply?</h3>
-        <p>
-          Would you like Offerly to autofill this application
-          using your saved profile?
-        </p>
+    <main class="panel-content">
+      <section id="loginView" class="panel-card">
+        <h2>Welcome back</h2>
+        <p class="muted">Sign in to use your saved profile.</p>
 
-        <button id="autofillBtn" type="button">
-          ✨ Yes, Autofill Application
+        <label for="emailInput">Email</label>
+        <input
+          id="emailInput"
+          type="email"
+          placeholder="you@example.com"
+          autocomplete="email"
+        />
+
+        <label for="passwordInput">Password</label>
+        <input
+          id="passwordInput"
+          type="password"
+          placeholder="Your password"
+          autocomplete="current-password"
+        />
+
+        <button id="loginBtn" type="button" class="primary-button">
+          Log in
         </button>
 
-        <button id="notNowBtn" type="button" class="secondary-btn">
-          Not now
-        </button>
-      </div>
+        <p id="loginStatus" role="status"></p>
+      </section>
 
-      <p id="status" role="status"></p>
+      <section id="saveView" class="hidden">
+        <section class="panel-card job-card">
+          <div class="card-topline">
+            <h2>Current application</h2>
+            <span id="saveBadge" class="save-badge">Checking...</span>
+          </div>
 
-      <button id="logoutBtn" type="button" class="secondary-btn">
-        Disconnect
-      </button>
-    </section>
-  </main>
+          <label for="company">Company</label>
+          <input id="company" type="text" placeholder="Company" />
+
+          <label for="role">Position</label>
+          <input id="role" type="text" placeholder="Position" />
+
+          <details class="job-details">
+            <summary>Job details</summary>
+
+            <label for="location">Location</label>
+            <input id="location" type="text" placeholder="Location" />
+
+            <a
+              id="jobLink"
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="job-link hidden"
+            >View job posting ↗</a>
+          </details>
+        </section>
+
+        <section class="panel-card autofill-card">
+          <h2>A little less typing.</h2>
+          <p class="muted">
+            Fill basic details and attach your default résumé.
+          </p>
+
+          <button
+            id="autofillBtn"
+            type="button"
+            class="primary-button"
+          >Fill basic info</button>
+
+          <p class="small muted">
+            For written answers, click ✦ beside the question.
+          </p>
+
+          <section id="fillResults" class="fill-results" hidden>
+            <div class="card-topline">
+              <h3>Filled this time</h3>
+              <span id="fillCount" class="count"></span>
+            </div>
+            <ul id="filledFields"></ul>
+          </section>
+
+          <div id="status" role="status" aria-live="polite"></div>
+        </section>
+
+        <section class="panel-card submission-card">
+          <div>
+            <h2>Finished applying?</h2>
+            <p id="appliedHint" class="applied-hint">
+              Submit on the employer’s site, then update your tracker.
+            </p>
+          </div>
+
+          <button
+            id="markAppliedBtn"
+            type="button"
+            class="mark-applied-btn"
+            disabled
+          >✓ Mark as Applied</button>
+
+          <button
+            id="notNowBtn"
+            type="button"
+            class="secondary-btn"
+          >Not now</button>
+        </section>
+
+        <footer class="panel-footer">
+          <span>Offerly account</span>
+          <button
+            id="logoutBtn"
+            type="button"
+            class="secondary-btn"
+          >Sign out</button>
+        </footer>
+      </section>
+    </main>
+  </div>
+
   <script src="popup.js"></script>
-<script src="dropdownDriver.js"></script>
-
-<script src="smartAnswers.js"></script>
-<script src="aiAgent.js"></script>
-<script src="profileAutofill.js"></script>
-
+  <script src="dropdownDriver.js"></script>
+  <script src="smartAnswers.js"></script>
+  <script src="aiAgent.js"></script>
+  <script src="profileAutofill.js"></script>
+  <script src="formSync.js"></script>
+  <script src="sidepanel.js"></script>
+  <script src="draftControls.js"></script>
 </body>
 </html>
