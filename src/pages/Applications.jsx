@@ -6,6 +6,7 @@ import { supabase } from "../lib/supabaseClient";
 
 import ApplicationTable from "../applications/ApplicationTable";
 import ApplicationModal from "../applications/ApplicationModal";
+import ImportApplications from "../applications/ImportApplications";
 
 export default function Applications() {
   const [search, setSearch] = useState("");
@@ -13,7 +14,7 @@ export default function Applications() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingApplication, setEditingApplication] = useState(null);
   const [searchParams] = useSearchParams();
-
+const [isImportOpen, setIsImportOpen] = useState(false);
   useEffect(() => {
     fetchApplications();
   }, []);
@@ -181,6 +182,12 @@ ${pageText}
           onChange={e => setSearch(e.target.value)}
         />
 
+<button
+  type="button"
+  onClick={() => setIsImportOpen(true)}
+>
+  Import spreadsheet
+</button>
         <button
           onClick={() => {
             setEditingApplication(null);
@@ -210,6 +217,14 @@ ${pageText}
           onSave={handleSaveApplication}
         />
       )}
+
+      {isImportOpen && (
+  <ImportApplications
+    applications={applications}
+    onClose={() => setIsImportOpen(false)}
+    onImported={fetchApplications}
+  />
+)}
     </>
   );
 }
